@@ -37,6 +37,7 @@ export default {
           options.i18n.formatter = this.$root.$i18n.formatter
           options.i18n.fallbackLocale = this.$root.$i18n.fallbackLocale
           options.i18n.silentTranslationWarn = this.$root.$i18n.silentTranslationWarn
+          options.i18n.silentRootFallbackWarn = this.$root.$i18n.silentRootFallbackWarn
         }
 
         // init locale messages via custom blocks

@@ -33,6 +33,7 @@ export default class VueI18n {
   _watcher: any
   _i18nWatcher: Function
   _silentTranslationWarn: boolean
+  _silentRootFallbackWarn: boolean
   _dateTimeFormatters: Object
   _numberFormatters: Object
   _path: I18nPath
@@ -56,6 +57,9 @@ export default class VueI18n {
     this._silentTranslationWarn = options.silentTranslationWarn === undefined
       ? false
       : !!options.silentTranslationWarn
+    this._silentRootFallbackWarn = options.silentRootFallbackWarn === undefined
+      ? false
+      : !!options.silentRootFallbackWarn
     this._dateTimeFormatters = {}
     this._numberFormatters = {}
     this._path = new I18nPath()
@@ -143,6 +147,9 @@ export default class VueI18n {
   get silentTranslationWarn (): boolean { return this._silentTranslationWarn }
   set silentTranslationWarn (silent: boolean): void { this._silentTranslationWarn = silent }
 
+  get silentRootFallbackWarn (): boolean { return this._silentRootFallbackWarn }
+  set silentRootFallbackWarn (silent: boolean): void { this._silentRootFallbackWarn = silent }
+
   _getMessages (): LocaleMessages { return this._vm.messages }
   _getDateTimeFormats (): DateTimeFormats { return this._vm.dateTimeFormats }
   _getNumberFormats (): NumberFormats { return this._vm.numberFormats }
@@ -185,7 +192,8 @@ export default class VueI18n {
       if (isPlainObject(message)) {
         ret = message[key]
         if (typeof ret !== 'string') {
-          if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
+          if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn &&
+            (!this._silentRootFallbackWarn || !this._isFallbackRoot(ret))) {
             warn(`Value of key '${key}' is not a string!`)
           }
           return null
@@ -306,7 +314,7 @@ export default class VueI18n {
       host, 'string', parsedArgs.params
     )
     if (this._isFallbackRoot(ret)) {
-      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to translate the keypath '${key}' with root locale.`)
       }
       /* istanbul ignore if */
