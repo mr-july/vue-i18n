@@ -40,6 +40,14 @@ export default class VueI18n {
   _dataListeners: Array<any>
 
   constructor (options: I18nOptions = {}) {
+    // Auto install if it is not done yet and `window` has `Vue`.
+    // To allow users to avoid auto-installation in some cases,
+    // this code should be placed here. See #290
+    /* istanbul ignore if */
+    if (!Vue && typeof window !== 'undefined' && window.Vue) {
+      install(window.Vue)
+    }
+
     const locale: Locale = options.locale || 'en-US'
     const fallbackLocale: Locale = options.fallbackLocale || 'en-US'
     const messages: LocaleMessages = options.messages || {}
@@ -156,8 +164,8 @@ export default class VueI18n {
 
   _warnDefault (locale: Locale, key: Path, result: ?any, vm: ?any): ?string {
     if (!isNull(result)) { return result }
-    if (this.missing) {
-      this.missing.apply(null, [locale, key, vm])
+    if (this._missing) {
+      this._missing.apply(null, [locale, key, vm])
     } else {
       if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
         warn(
@@ -218,7 +226,7 @@ export default class VueI18n {
       ret = this._link(locale, message, ret, host, interpolateMode, values)
     }
 
-    return !values ? ret : this._render(ret, interpolateMode, values)
+    return this._render(ret, interpolateMode, values)
   }
 
   _link (
@@ -391,7 +399,7 @@ export default class VueI18n {
   }
 
   mergeLocaleMessage (locale: Locale, message: LocaleMessageObject): void {
-    this._vm.messages[locale] = Vue.util.extend(this._vm.messages[locale] || {}, message)
+    this._vm.$set(this._vm.messages, locale, Vue.util.extend(this._vm.messages[locale] || {}, message))
   }
 
   getDateTimeFormat (locale: Locale): DateTimeFormat {
@@ -403,7 +411,7 @@ export default class VueI18n {
   }
 
   mergeDateTimeFormat (locale: Locale, format: DateTimeFormat): void {
-    this._vm.dateTimeFormats[locale] = Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format)
+    this._vm.$set(this._vm.dateTimeFormats, locale, Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format))
   }
 
   _localizeDateTime (
@@ -499,7 +507,7 @@ export default class VueI18n {
   }
 
   mergeNumberFormat (locale: Locale, format: NumberFormat): void {
-    this._vm.numberFormats[locale] = Vue.util.extend(this._vm.numberFormats[locale] || {}, format)
+    this._vm.$set(this._vm.numberFormats, locale, Vue.util.extend(this._vm.numberFormats[locale] || {}, format))
   }
 
   _localizeNumber (
@@ -593,8 +601,3 @@ VueI18n.availabilities = {
 }
 VueI18n.install = install
 VueI18n.version = '__VERSION__'
-
-/* istanbul ignore if */
-if (typeof window !== 'undefined' && window.Vue) {
-  window.Vue.use(VueI18n)
-}
