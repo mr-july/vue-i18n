@@ -18,6 +18,20 @@ import I18nPath from './path'
 
 import type { PathValue } from './path'
 
+const numberFormatKeys = [
+  'style',
+  'currency',
+  'currencyDisplay',
+  'useGrouping',
+  'minimumIntegerDigits',
+  'minimumFractionDigits',
+  'maximumFractionDigits',
+  'minimumSignificantDigits',
+  'maximumSignificantDigits',
+  'localeMatcher',
+  'formatMatcher'
+]
+
 export default class VueI18n {
   static install: () => void
   static version: string
@@ -162,10 +176,10 @@ export default class VueI18n {
   _getDateTimeFormats (): DateTimeFormats { return this._vm.dateTimeFormats }
   _getNumberFormats (): NumberFormats { return this._vm.numberFormats }
 
-  _warnDefault (locale: Locale, key: Path, result: ?any, vm: ?any): ?string {
+  _warnDefault (locale: Locale, key: Path, result: ?any, vm: ?any, values: any): ?string {
     if (!isNull(result)) { return result }
     if (this._missing) {
-      this._missing.apply(null, [locale, key, vm])
+      this._missing.apply(null, [locale, key, vm, values])
     } else {
       if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
         warn(
@@ -192,7 +206,7 @@ export default class VueI18n {
     if (!message) { return null }
 
     const pathRet: PathValue = this._path.getPathValue(message, key)
-    if (Array.isArray(pathRet)) { return pathRet }
+    if (Array.isArray(pathRet) || isPlainObject(pathRet)) { return pathRet }
 
     let ret: mixed
     if (isNull(pathRet)) {
@@ -271,7 +285,10 @@ export default class VueI18n {
           linkPlaceholder, host, interpolateMode, values
         )
       }
-      translated = this._warnDefault(locale, linkPlaceholder, translated, host)
+      translated = this._warnDefault(
+        locale, linkPlaceholder, translated, host,
+        Array.isArray(values) ? values : [values]
+      )
 
       // Replace the link with the translated
       ret = !translated ? ret : ret.replace(link, translated)
@@ -329,7 +346,7 @@ export default class VueI18n {
       if (!this._root) { throw Error('unexpected error') }
       return this._root.t(key, ...values)
     } else {
-      return this._warnDefault(locale, key, ret, host)
+      return this._warnDefault(locale, key, ret, host, values)
     }
   }
 
@@ -347,7 +364,7 @@ export default class VueI18n {
       if (!this._root) { throw Error('unexpected error') }
       return this._root.i(key, locale, values)
     } else {
-      return this._warnDefault(locale, key, ret, host)
+      return this._warnDefault(locale, key, ret, host, [values])
     }
   }
 
@@ -449,7 +466,7 @@ export default class VueI18n {
   _d (value: number | Date, locale: Locale, key: ?string): DateTimeFormatResult {
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && !VueI18n.availabilities.dateTimeFormat) {
-      warn('Cannot format a Date value due to not support Intl.DateTimeFormat.')
+      warn('Cannot format a Date value due to not supported Intl.DateTimeFormat.')
       return ''
     }
 
@@ -515,7 +532,8 @@ export default class VueI18n {
     locale: Locale,
     fallback: Locale,
     numberFormats: NumberFormats,
-    key: string
+    key: string,
+    options: ?NumberFormatOptions
   ): ?NumberFormatResult {
     let _locale: Locale = locale
     let formats: NumberFormat = numberFormats[_locale]
@@ -533,35 +551,43 @@ export default class VueI18n {
       return null
     } else {
       const format: ?NumberFormatOptions = formats[key]
-      const id = `${_locale}__${key}`
-      let formatter = this._numberFormatters[id]
-      if (!formatter) {
-        formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format)
+
+      let formatter
+      if (options) {
+        // If options specified - create one time number formatter
+        formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options))
+      } else {
+        const id = `${_locale}__${key}`
+        formatter = this._numberFormatters[id]
+        if (!formatter) {
+          formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format)
+        }
       }
       return formatter.format(value)
     }
   }
 
-  _n (value: number, locale: Locale, key: ?string): NumberFormatResult {
+  _n (value: number, locale: Locale, key: ?string, options: ?NumberFormatOptions): NumberFormatResult {
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && !VueI18n.availabilities.numberFormat) {
-      warn('Cannot format a Date value due to not support Intl.NumberFormat.')
+      warn('Cannot format a Number value due to not supported Intl.NumberFormat.')
       return ''
     }
 
     if (!key) {
-      return new Intl.NumberFormat(locale).format(value)
+      const nf = !options ? new Intl.NumberFormat(locale) : new Intl.NumberFormat(locale, options)
+      return nf.format(value)
     }
 
     const ret: ?NumberFormatResult =
-      this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key)
+      this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key, options)
     if (this._isFallbackRoot(ret)) {
       if (process.env.NODE_ENV !== 'production') {
         warn(`Fall back to number localization of root: key '${key}' .`)
       }
       /* istanbul ignore if */
       if (!this._root) { throw Error('unexpected error') }
-      return this._root.n(value, key, locale)
+      return this._root.n(value, Object.assign({}, { key, locale }, options))
     } else {
       return ret || ''
     }
@@ -570,6 +596,7 @@ export default class VueI18n {
   n (value: number, ...args: any): NumberFormatResult {
     let locale: Locale = this.locale
     let key: ?string = null
+    let options: ?NumberFormatOptions = null
 
     if (args.length === 1) {
       if (typeof args[0] === 'string') {
@@ -581,6 +608,14 @@ export default class VueI18n {
         if (args[0].key) {
           key = args[0].key
         }
+
+        // Filter out number format options only
+        options = Object.keys(args[0]).reduce((acc, key) => {
+          if (numberFormatKeys.includes(key)) {
+            return Object.assign({}, acc, { [key]: args[0][key] })
+          }
+          return acc
+        }, null)
       }
     } else if (args.length === 2) {
       if (typeof args[0] === 'string') {
@@ -591,7 +626,7 @@ export default class VueI18n {
       }
     }
 
-    return this._n(value, locale, key)
+    return this._n(value, locale, key, options)
   }
 }
 
