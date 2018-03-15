@@ -1,5 +1,5 @@
 /*!
- * vue-i18n v7.5.0 
+ * vue-i18n v7.6.0 
  * (c) 2018 kazuya kawaguchi
  * Released under the MIT License.
  */
@@ -1110,7 +1110,10 @@ VueI18n.prototype._getNumberFormats = function _getNumberFormats () { return thi
 VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm, values) {
   if (!isNull(result)) { return result }
   if (this._missing) {
-    this._missing.apply(null, [locale, key, vm, values]);
+    var missingRet = this._missing.apply(null, [locale, key, vm, values]);
+    if (typeof missingRet === 'string') {
+      return missingRet
+    }
   } else {
     if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
       warn(
@@ -1300,9 +1303,9 @@ VueI18n.prototype._i = function _i (key, locale, messages, host, values) {
     this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values);
   if (this._isFallbackRoot(ret)) {
     if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
-        warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
-    }
-    if (!this._root) { throw Error('unexpected error') }
+      warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
+      }
+      if (!this._root) { throw Error('unexpected error') }
     return this._root.i(key, locale, values)
   } else {
     return this._warnDefault(locale, key, ret, host, [values])
@@ -1385,7 +1388,7 @@ VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, fo
 VueI18n.prototype._localizeDateTime = function _localizeDateTime (
   value,
   locale,
-  fallback,
+    fallback,
   dateTimeFormats,
   key
 ) {
@@ -1406,7 +1409,7 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
   } else {
     var format = formats[key];
     var id = _locale + "__" + key;
-      var formatter = this._dateTimeFormatters[id];
+    var formatter = this._dateTimeFormatters[id];
     if (!formatter) {
       formatter = this._dateTimeFormatters[id] = new Intl.DateTimeFormat(_locale, format);
     }
@@ -1507,12 +1510,12 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
     var format = formats[key];
 
     var formatter;
-      if (options) {
-        // If options specified - create one time number formatter
+    if (options) {
+      // If options specified - create one time number formatter
       formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
     } else {
       var id = _locale + "__" + key;
-      formatter = this._numberFormatters[id];
+        formatter = this._numberFormatters[id];
       if (!formatter) {
         formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format);
       }
@@ -1594,6 +1597,6 @@ VueI18n.availabilities = {
   numberFormat: canUseNumberFormat
 };
 VueI18n.install = install;
-VueI18n.version = '7.5.0';
+VueI18n.version = '7.6.0';
 
 module.exports = VueI18n;

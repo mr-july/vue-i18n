@@ -179,7 +179,10 @@ export default class VueI18n {
   _warnDefault (locale: Locale, key: Path, result: ?any, vm: ?any, values: any): ?string {
     if (!isNull(result)) { return result }
     if (this._missing) {
-      this._missing.apply(null, [locale, key, vm, values])
+      const missingRet = this._missing.apply(null, [locale, key, vm, values])
+      if (typeof missingRet === 'string') {
+        return missingRet
+      }
     } else {
       if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
         warn(

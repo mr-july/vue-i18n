@@ -9,7 +9,7 @@ declare namespace VueI18n {
   interface LocaleMessageObject { [key: string]: LocaleMessage; }
   interface LocaleMessageArray { [index: number]: LocaleMessage; }
   interface LocaleMessages { [key: string]: LocaleMessageObject; }
-  type TranslateResult = string | LocaleMessageArray;
+  type TranslateResult = string | LocaleMessages;
   interface DateTimeFormatOptions {
     year?: string;
     month?: string;
@@ -49,7 +49,7 @@ declare namespace VueI18n {
     interpolate(message: string, values?: Values): any[];
   }
 
-  type MissingHandler = (locale: Locale, key: Path, vm?: Vue) => void;
+  type MissingHandler = (locale: Locale, key: Path, vm?: Vue) => string | void;
 
   interface IntlAvailability {
     dateTimeFormat: boolean;
