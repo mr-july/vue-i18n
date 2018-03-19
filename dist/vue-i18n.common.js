@@ -1366,7 +1366,7 @@ VueI18n.prototype.getLocaleMessage = function getLocaleMessage (locale) {
 };
 
 VueI18n.prototype.setLocaleMessage = function setLocaleMessage (locale, message) {
-  this._vm.messages[locale] = message;
+  this._vm.$set(this._vm.messages, locale, message);
 };
 
 VueI18n.prototype.mergeLocaleMessage = function mergeLocaleMessage (locale, message) {
@@ -1378,7 +1378,7 @@ VueI18n.prototype.getDateTimeFormat = function getDateTimeFormat (locale) {
 };
 
 VueI18n.prototype.setDateTimeFormat = function setDateTimeFormat (locale, format) {
-  this._vm.dateTimeFormats[locale] = format;
+  this._vm.$set(this._vm.dateTimeFormats, locale, format);
 };
 
 VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, format) {
@@ -1386,9 +1386,9 @@ VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, fo
 };
 
 VueI18n.prototype._localizeDateTime = function _localizeDateTime (
-  value,
+    value,
   locale,
-    fallback,
+  fallback,
   dateTimeFormats,
   key
 ) {
@@ -1477,7 +1477,7 @@ VueI18n.prototype.getNumberFormat = function getNumberFormat (locale) {
 };
 
 VueI18n.prototype.setNumberFormat = function setNumberFormat (locale, format) {
-  this._vm.numberFormats[locale] = format;
+  this._vm.$set(this._vm.numberFormats, locale, format);
 };
 
 VueI18n.prototype.mergeNumberFormat = function mergeNumberFormat (locale, format) {
@@ -1512,10 +1512,10 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
     var formatter;
     if (options) {
       // If options specified - create one time number formatter
-      formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
+        formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
     } else {
-      var id = _locale + "__" + key;
-        formatter = this._numberFormatters[id];
+        var id = _locale + "__" + key;
+      formatter = this._numberFormatters[id];
       if (!formatter) {
         formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format);
       }
