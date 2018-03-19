@@ -361,7 +361,7 @@ export default class VueI18n {
     const ret: any =
       this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values)
     if (this._isFallbackRoot(ret)) {
-      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to interpolate the keypath '${key}' with root locale.`)
       }
       if (!this._root) { throw Error('unexpected error') }
@@ -480,7 +480,7 @@ export default class VueI18n {
     const ret: ?DateTimeFormatResult =
       this._localizeDateTime(value, locale, this.fallbackLocale, this._getDateTimeFormats(), key)
     if (this._isFallbackRoot(ret)) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to datetime localization of root: key '${key}' .`)
       }
       /* istanbul ignore if */
@@ -543,7 +543,7 @@ export default class VueI18n {
 
     // fallback locale
     if (isNull(formats) || isNull(formats[key])) {
-      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
         warn(`Fall back to '${fallback}' number formats from '${locale} number formats.`)
       }
       _locale = fallback
@@ -585,7 +585,7 @@ export default class VueI18n {
     const ret: ?NumberFormatResult =
       this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key, options)
     if (this._isFallbackRoot(ret)) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to number localization of root: key '${key}' .`)
       }
       /* istanbul ignore if */
