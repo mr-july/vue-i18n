@@ -446,7 +446,7 @@ export default class VueI18n {
 
     // fallback locale
     if (isNull(formats) || isNull(formats[key])) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to '${fallback}' datetime formats from '${locale} datetime formats.`)
       }
       _locale = fallback
@@ -543,7 +543,7 @@ export default class VueI18n {
 
     // fallback locale
     if (isNull(formats) || isNull(formats[key])) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(`Fall back to '${fallback}' number formats from '${locale} number formats.`)
       }
       _locale = fallback
