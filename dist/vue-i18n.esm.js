@@ -1300,10 +1300,10 @@ VueI18n.prototype._i = function _i (key, locale, messages, host, values) {
   var ret =
     this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values);
   if (this._isFallbackRoot(ret)) {
-    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
+    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
       warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
       }
-      if (!this._root) { throw Error('unexpected error') }
+    if (!this._root) { throw Error('unexpected error') }
     return this._root.i(key, locale, values)
   } else {
     return this._warnDefault(locale, key, ret, host, [values])
@@ -1381,10 +1381,10 @@ VueI18n.prototype.setDateTimeFormat = function setDateTimeFormat (locale, format
 
 VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, format) {
   this._vm.$set(this._vm.dateTimeFormats, locale, Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format));
-};
+  };
 
 VueI18n.prototype._localizeDateTime = function _localizeDateTime (
-    value,
+  value,
   locale,
   fallback,
   dateTimeFormats,
@@ -1395,7 +1395,7 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
 
   // fallback locale
   if (isNull(formats) || isNull(formats[key])) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
       warn(("Fall back to '" + fallback + "' datetime formats from '" + locale + " datetime formats."));
     }
     _locale = fallback;
@@ -1406,7 +1406,7 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
     return null
   } else {
     var format = formats[key];
-    var id = _locale + "__" + key;
+      var id = _locale + "__" + key;
     var formatter = this._dateTimeFormatters[id];
     if (!formatter) {
       formatter = this._dateTimeFormatters[id] = new Intl.DateTimeFormat(_locale, format);
@@ -1429,7 +1429,7 @@ VueI18n.prototype._d = function _d (value, locale, key) {
   var ret =
     this._localizeDateTime(value, locale, this.fallbackLocale, this._getDateTimeFormats(), key);
   if (this._isFallbackRoot(ret)) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
       warn(("Fall back to datetime localization of root: key '" + key + "' ."));
     }
     /* istanbul ignore if */
@@ -1495,24 +1495,24 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
 
   // fallback locale
   if (isNull(formats) || isNull(formats[key])) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
       warn(("Fall back to '" + fallback + "' number formats from '" + locale + " number formats."));
     }
     _locale = fallback;
     formats = numberFormats[_locale];
   }
 
-  if (isNull(formats) || isNull(formats[key])) {
+    if (isNull(formats) || isNull(formats[key])) {
     return null
   } else {
     var format = formats[key];
 
     var formatter;
-    if (options) {
+      if (options) {
       // If options specified - create one time number formatter
-        formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
+      formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
     } else {
-        var id = _locale + "__" + key;
+      var id = _locale + "__" + key;
       formatter = this._numberFormatters[id];
       if (!formatter) {
         formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format);
@@ -1537,7 +1537,7 @@ VueI18n.prototype._n = function _n (value, locale, key, options) {
   var ret =
     this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key, options);
   if (this._isFallbackRoot(ret)) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
       warn(("Fall back to number localization of root: key '" + key + "' ."));
     }
     /* istanbul ignore if */
