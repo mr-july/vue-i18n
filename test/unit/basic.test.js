@@ -49,6 +49,12 @@ describe('basic', () => {
       })
     })
 
+    describe('linked translation', () => {
+      it('should translate link with braces ', () => {
+        assert.strictEqual(i18n.t('message.linkBrackets'), 'Hello hoge. Isn\'t the world great?')
+      })
+    })
+
     describe('ja locale', () => {
       it('should translate a japanese', () => {
         assert.equal(i18n.t('message.hello', 'ja'), messages.ja.message.hello)
@@ -182,6 +188,30 @@ describe('basic', () => {
         assert.equal(i18n.tc('plurals.apple', 0), 'no apples')
         assert.equal(i18n.tc('plurals.apple', 1), 'one apple')
         assert.equal(i18n.tc('plurals.apple', count, { count }), '10 apples')
+      })
+    })
+
+    describe('implicit choice exposing', () => {
+      describe('en locale', () => {
+        it('should expose "count" implicitly to locale message', () => {
+          assert.strictEqual(i18n.tc('plurals.apple', 10), '10 apples')
+        })
+
+        it('should not expose if given explicitly', () => {
+          const explicitArgs = { 'count': 'Many' }
+          assert.strictEqual(i18n.tc('plurals.apple', 10, explicitArgs), 'Many apples')
+        })
+      })
+
+      describe('ja locale', () => {
+        it('should expose "count" and "n" implicitly to locale message', () => {
+          assert.strictEqual(i18n.tc('plurals.implicitPluralCount', 10, 'ja'), 'count:10, n:10')
+        })
+
+        it('should not expose if given explicitly', () => {
+          const explicitArgs = { 'count': 'たくさん', 'n': '大量' }
+          assert.strictEqual(i18n.tc('plurals.implicitPluralCount', 10, 'ja', explicitArgs), 'count:たくさん, n:大量')
+        })
       })
     })
 
@@ -695,8 +725,8 @@ describe('basic', () => {
         })
 
         it('should respect other number options', () => {
-          const options = { style: 'currency', currency: 'EUR', currencyDisplay: 'code' }
-          assert.equal(i18n.n(money, options), 'EUR10,100.00')
+          const options = { style: 'currency', currency: 'EUR', currencyDisplay: 'symbol' }
+          assert.equal(i18n.n(money, options), '€10,100.00')
         })
       })
 
@@ -706,8 +736,8 @@ describe('basic', () => {
         })
 
         it('should respect other number options', () => {
-          const options = { key: 'currency', currency: 'EUR', currencyDisplay: 'code' }
-          assert.equal(i18n.n(money, options), 'EUR10,100.00')
+          const options = { key: 'currency', currency: 'EUR', currencyDisplay: 'symbol' }
+          assert.equal(i18n.n(money, options), '€10,100.00')
         })
       })
     })

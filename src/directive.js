@@ -11,20 +11,39 @@ export function bind (el: any, binding: Object, vnode: any): void {
 export function update (el: any, binding: Object, vnode: any, oldVNode: any): void {
   if (!assert(el, vnode)) { return }
 
-  if (localeEqual(el, vnode) && looseEqual(binding.value, binding.oldValue)) { return }
+  const i18n: any = vnode.context.$i18n
+  if (localeEqual(el, vnode) &&
+    (looseEqual(binding.value, binding.oldValue) &&
+     looseEqual(el._localeMessage, i18n.getLocaleMessage(i18n.locale)))) { return }
 
   t(el, binding, vnode)
+}
+
+export function unbind (el: any, binding: Object, vnode: any, oldVNode: any): void {
+  const vm: any = vnode.context
+  if (!vm) {
+    warn('Vue instance does not exists in VNode context')
+    return
+  }
+
+  el.textContent = ''
+  el._vt = undefined
+  delete el['_vt']
+  el._locale = undefined
+  delete el['_locale']
+  el._localeMessage = undefined
+  delete el['_localeMessage']
 }
 
 function assert (el: any, vnode: any): boolean {
   const vm: any = vnode.context
   if (!vm) {
-    warn('not exist Vue instance in VNode context')
+    warn('Vue instance doest not exists in VNode context')
     return false
   }
 
   if (!vm.$i18n) {
-    warn('not exist VueI18n instance in Vue instance')
+    warn('VueI18n instance does not exists in Vue instance')
     return false
   }
 
@@ -41,12 +60,12 @@ function t (el: any, binding: Object, vnode: any): void {
 
   const { path, locale, args, choice } = parseValue(value)
   if (!path && !locale && !args) {
-    warn('not support value type')
+    warn('value type not supported')
     return
   }
 
   if (!path) {
-    warn('required `path` in v-t directive')
+    warn('`path` is required in v-t directive')
     return
   }
 
@@ -57,6 +76,7 @@ function t (el: any, binding: Object, vnode: any): void {
     el._vt = el.textContent = vm.$i18n.t(path, ...makeParams(locale, args))
   }
   el._locale = vm.$i18n.locale
+  el._localeMessage = vm.$i18n.getLocaleMessage(vm.$i18n.locale)
 }
 
 function parseValue (value: any): Object {

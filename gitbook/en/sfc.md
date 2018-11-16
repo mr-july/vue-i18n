@@ -53,6 +53,28 @@ $ npm i --save-dev @kazupon/vue-i18n-loader
 
 For Webpack the configuration below is required:
 
+for vue-loader v15:
+```js
+module.exports = {
+  // ...
+  module: {
+    rules: [
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
+      },
+      {
+        resourceQuery: /blockType=i18n/,
+        loader: '@kazupon/vue-i18n-loader'
+      }
+      // ...
+    ]
+  },
+  // ...
+}
+```
+
+for vue-loader v14:
 ```js
 module.exports = {
   // ...
@@ -190,6 +212,31 @@ ja:
 
 Webpack conf the below:
 
+for vue-loader v15:
+```js
+module.exports = {
+  // ...
+  module: {
+    rules: [
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
+      },
+      {
+        resourceQuery: /blockType=i18n/,
+        use: [
+          {loader: '@kazupon/vue-i18n-loader'},
+          {loader: 'yaml-loader'}
+        ]
+      }
+      // ...
+    ]
+  },
+  // ...
+}
+```
+
+for vue-loader v14:
 ```js
 module.exports = {
   // ...
@@ -232,6 +279,6 @@ you can be used the locale messages with multiple `i18n` custom block.
 </i18n>
 ```
 
-In the above, first custom block load the common locale message with `src` attribute, second custom block load the locale messge that defined only at single file component. These locale messages will be merged as locale message of component.
+In the above, first custom block load the common locale message with `src` attribute, second custom block load the locale message that defined only at single file component. These locale messages will be merged as locale message of component.
 
 In this way, multiple custom blocks useful when want to be used as module.

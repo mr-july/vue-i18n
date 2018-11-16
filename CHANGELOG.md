@@ -1,3 +1,167 @@
+<a name="8.3.2"></a>
+## [8.3.2](https://github.com/kazupon/vue-i18n/compare/v8.3.1...v8.3.2) (2018-11-16)
+
+
+### :chart_with_upwards_trend: Performance Fixes
+
+* **index:** Optimize unnecessary capturing. ([#462](https://github.com/kazupon/vue-i18n/issues/462)) by [@exoego](https://github.com/exoego) ([116845e](https://github.com/kazupon/vue-i18n/commit/116845e)), closes [#462](https://github.com/kazupon/vue-i18n/issues/462)
+
+
+
+<a name="8.3.1"></a>
+## [8.3.1](https://github.com/kazupon/vue-i18n/compare/v8.3.0...v8.3.1) (2018-11-08)
+
+
+### :bug: Bug Fixes
+
+* **directive:** fix cannnot update with v-t when had been changed locale message ([4895a2e](https://github.com/kazupon/vue-i18n/commit/4895a2e)), closes [#450](https://github.com/kazupon/vue-i18n/issues/450)
+* **index:** fix merge bug ([1798490](https://github.com/kazupon/vue-i18n/commit/1798490)), closes [#458](https://github.com/kazupon/vue-i18n/issues/458)
+* **missing:** fix vm argument passing ([dc48099](https://github.com/kazupon/vue-i18n/commit/dc48099)), closes [#453](https://github.com/kazupon/vue-i18n/issues/453)
+
+
+### :zap: Improvements
+
+* Optimize path.js and format.js ([#456](https://github.com/kazupon/vue-i18n/issues/456)) by [@exoego](https://github.com/exoego) ([639453c](https://github.com/kazupon/vue-i18n/commit/639453c)), closes [#456](https://github.com/kazupon/vue-i18n/issues/456)
+
+
+
+<a name="8.3.0"></a>
+# [8.3.0](https://github.com/kazupon/vue-i18n/compare/v8.2.1...v8.3.0) (2018-10-29)
+
+
+### :zap: Improvements
+
+* **pluralization:** Extendable pluralization by [@Raiondesu](https://github.com/Raiondesu) ([bbab90b](https://github.com/kazupon/vue-i18n/commit/bbab90b))
+
+
+
+<a name="8.2.1"></a>
+## [8.2.1](https://github.com/kazupon/vue-i18n/compare/v8.2.0...v8.2.1) (2018-10-15)
+
+
+### :bug: Bug Fixes
+
+* **extend:** fix TypeError: Cannot redefine property: $i18n ([#422](https://github.com/kazupon/vue-i18n/issues/422)) by [@HadiChen](https://github.com/HadiChen) ([cb19082](https://github.com/kazupon/vue-i18n/commit/cb19082)), closes [#422](https://github.com/kazupon/vue-i18n/issues/422)
+
+
+### :zap: Improvements
+
+* **index:** Suppress some warnings in production: smaller min.js and performance gain. ([#441](https://github.com/kazupon/vue-i18n/issues/441)) by @	exoego ([43931f5](https://github.com/kazupon/vue-i18n/commit/43931f5)), closes [#441](https://github.com/kazupon/vue-i18n/issues/441)
+
+
+
+<a name="8.2.0"></a>
+# [8.2.0](https://github.com/kazupon/vue-i18n/compare/v8.1.1...v8.2.0) (2018-10-13)
+
+
+### :bug: Bug Fixes
+
+* **index:** Add warning for circular reference in linked message ([#438](https://github.com/kazupon/vue-i18n/issues/438)) by [@exoego](https://github.com/exoego) ([7583485](https://github.com/kazupon/vue-i18n/commit/7583485)), closes [#438](https://github.com/kazupon/vue-i18n/issues/438)
+
+
+### :zap: Improvements
+
+* **index:** Allow escaping link key like @:(foo.bar). ([#437](https://github.com/kazupon/vue-i18n/issues/437)) by [@exoego](https://github.com/exoego) ([acfc458](https://github.com/kazupon/vue-i18n/commit/acfc458)), closes [#437](https://github.com/kazupon/vue-i18n/issues/437)
+* **index:** Pre-defined named arguments for Pluraization ([#440](https://github.com/kazupon/vue-i18n/issues/440)) by [@exoego](https://github.com/exoego) ([e84f0fb](https://github.com/kazupon/vue-i18n/commit/e84f0fb)), closes [#440](https://github.com/kazupon/vue-i18n/issues/440)
+* **path:** Allow non-ascii chars including numbers. ([#436](https://github.com/kazupon/vue-i18n/issues/436)) by [@exoego](https://github.com/exoego) ([a556c58](https://github.com/kazupon/vue-i18n/commit/a556c58)), closes [#436](https://github.com/kazupon/vue-i18n/issues/436)
+
+
+
+<a name="8.1.1"></a>
+## [8.1.1](https://github.com/kazupon/vue-i18n/compare/v8.1.0...v8.1.1) (2018-10-12)
+
+
+### :bug: Bug Fixes
+
+* **build:** fix rollup building issues ([1a1958a](https://github.com/kazupon/vue-i18n/commit/1a1958a))
+* **format:** Should warn as unknown if named format is not closed. ([#435](https://github.com/kazupon/vue-i18n/issues/435)) by [@exoego](https://github.com/exoego) ([d1f6ed0](https://github.com/kazupon/vue-i18n/commit/d1f6ed0)), closes [#435](https://github.com/kazupon/vue-i18n/issues/435)
+* **install:** fix cannot redfine error ([6d5ec61](https://github.com/kazupon/vue-i18n/commit/6d5ec61))
+
+
+### :zap: Improvements
+
+* **package.json:** tree shaking optimization ([38948c5](https://github.com/kazupon/vue-i18n/commit/38948c5))
+
+
+
+<a name="8.1.0"></a>
+# [8.1.0](https://github.com/kazupon/vue-i18n/compare/v8.0.0...v8.1.0) (2018-09-03)
+
+
+### :bug: Bug Fixes
+
+* **install:** add support for Vue.extend vue-i18n instance ([#420](https://github.com/kazupon/vue-i18n/issues/420)) by [@jaredzhu1993](https://github.com/jaredzhu1993) ([a60ea8b](https://github.com/kazupon/vue-i18n/commit/a60ea8b)), closes [#420](https://github.com/kazupon/vue-i18n/issues/420)
+
+
+### :zap: Improvements
+
+* **warnings:** make warning messages clearer ([#396](https://github.com/kazupon/vue-i18n/issues/396)) by [@kimuraz](https://github.com/kimuraz) ([79eee1b](https://github.com/kazupon/vue-i18n/commit/79eee1b)), closes [#396](https://github.com/kazupon/vue-i18n/issues/396)
+
+
+
+<a name="8.0.0"></a>
+# [8.0.0](https://github.com/kazupon/vue-i18n/compare/v7.8.1...v8.0.0) (2018-06-23)
+
+
+### :boom: Breaking changes
+
+* **extend:** fix this context binding ([aa0e831](https://github.com/kazupon/vue-i18n/commit/aa0e831)), closes [#306](https://github.com/kazupon/vue-i18n/issues/306) [#286](https://github.com/kazupon/vue-i18n/issues/286) [#259](https://github.com/kazupon/vue-i18n/issues/259), revert [#260](https://github.com/kazupon/vue-i18n/issues/260)
+
+Note that you need to guarantee this context equal to component instance in lifecycle methods (e.g. in `data` options, `const $t = this.$t.bind(this)`).
+
+```js
+export default {
+  data () {
+    const $t = this.$t.bind(this)
+    return { msg: $t('msg') }
+  }
+}
+```
+
+see the [API docs](https://kazupon.github.io/vue-i18n/api/)
+
+### :bug: Bug Fixes
+
+* bug(directive): fix guard checking at unbind ([c74888c](https://github.com/kazupon/vue-i18n/commit/c74888c)), closes [#340](https://github.com/kazupon/vue-i18n/issues/340)
+
+
+### NOTE
+
+* extend: 
+
+
+
+<a name="7.8.1"></a>
+## [7.8.1](https://github.com/kazupon/vue-i18n/compare/v7.8.0...v7.8.1) (2018-06-18)
+
+
+### :bug: Bug Fixes
+
+* **directive:** fix cannot unbind bug ([105888d](https://github.com/kazupon/vue-i18n/commit/105888d)), closes [#377](https://github.com/kazupon/vue-i18n/issues/377)
+
+
+
+<a name="7.8.0"></a>
+# [7.8.0](https://github.com/kazupon/vue-i18n/compare/v7.7.0...v7.8.0) (2018-06-01)
+
+
+### :zap: Improvements
+
+* **typescript:** add type exportings ([a7cb8da](https://github.com/kazupon/vue-i18n/commit/a7cb8da))
+
+
+
+<a name="7.7.0"></a>
+# [7.7.0](https://github.com/kazupon/vue-i18n/compare/v7.6.0...v7.7.0) (2018-05-20)
+
+
+### :zap: Improvements
+
+* **index:** resource reactivity ([887a137](https://github.com/kazupon/vue-i18n/commit/887a137)), closes [#253](https://github.com/kazupon/vue-i18n/issues/253)
+* **typescript:** Fix typings in components ([#344](https://github.com/kazupon/vue-i18n/issues/344)) by [@Demivan](https://github.com/Demivan) ([2402893](https://github.com/kazupon/vue-i18n/commit/2402893)), closes [#344](https://github.com/kazupon/vue-i18n/issues/344)
+
+
+
 <a name="7.6.0"></a>
 # [7.6.0](https://github.com/kazupon/vue-i18n/compare/v7.5.0...v7.6.0) (2018-03-13)
 

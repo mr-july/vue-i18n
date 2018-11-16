@@ -5,11 +5,11 @@ import {
   warn,
   isNull,
   parseArgs,
-  fetchChoice,
   isPlainObject,
   isObject,
   looseClone,
   remove,
+  merge,
   canUseDateTimeFormat,
   canUseNumberFormat
 } from './util'
@@ -31,6 +31,8 @@ const numberFormatKeys = [
   'localeMatcher',
   'formatMatcher'
 ]
+const linkKeyMatcher = /(?:@:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g
+const bracketsMatcher = /[()]/g
 
 export default class VueI18n {
   static install: () => void
@@ -39,7 +41,7 @@ export default class VueI18n {
 
   _vm: any
   _formatter: Formatter
-  _root: ?I18n
+  _root: any
   _sync: boolean
   _fallbackRoot: boolean
   _missing: ?MissingHandler
@@ -138,7 +140,7 @@ export default class VueI18n {
     /* istanbul ignore if */
     if (!this._sync || !this._root) { return null }
     const target: any = this._vm
-    return this._root.vm.$watch('locale', (val) => {
+    return this._root.$i18n.vm.$watch('locale', (val) => {
       target.$set(target, 'locale', val)
       target.$forceUpdate()
     }, { immediate: true })
@@ -204,7 +206,8 @@ export default class VueI18n {
     key: Path,
     host: any,
     interpolateMode: string,
-    values: any
+    values: any,
+    visitedLinkStack: Array<string>
   ): any {
     if (!message) { return null }
 
@@ -238,9 +241,9 @@ export default class VueI18n {
       }
     }
 
-    // Check for the existance of links within the translated string
+    // Check for the existence of links within the translated string
     if (ret.indexOf('@:') >= 0) {
-      ret = this._link(locale, message, ret, host, interpolateMode, values)
+      ret = this._link(locale, message, ret, host, interpolateMode, values, visitedLinkStack)
     }
 
     return this._render(ret, interpolateMode, values)
@@ -252,14 +255,15 @@ export default class VueI18n {
     str: string,
     host: any,
     interpolateMode: string,
-    values: any
+    values: any,
+    visitedLinkStack: Array<string>
   ): any {
     let ret: string = str
 
     // Match all the links within the local
     // We are going to replace each of
     // them with its translation
-    const matches: any = ret.match(/(@:[\w\-_|.]+)/g)
+    const matches: any = ret.match(linkKeyMatcher)
     for (const idx in matches) {
       // ie compatible: filter custom array
       // prototype method
@@ -267,13 +271,23 @@ export default class VueI18n {
         continue
       }
       const link: string = matches[idx]
-      // Remove the leading @:
-      const linkPlaceholder: string = link.substr(2)
+      // Remove the leading @: and the brackets
+      const linkPlaceholder: string = link.substr(2).replace(bracketsMatcher, '')
+
+      if (visitedLinkStack.includes(linkPlaceholder)) {
+        if (process.env.NODE_ENV !== 'production') {
+          warn(`Circular reference found. "${link}" is already visited in the chain of ${visitedLinkStack.reverse().join(' <- ')}`)
+        }
+        return ret
+      }
+      visitedLinkStack.push(linkPlaceholder)
+
       // Translate the link
       let translated: any = this._interpolate(
         locale, message, linkPlaceholder, host,
         interpolateMode === 'raw' ? 'string' : interpolateMode,
-        interpolateMode === 'raw' ? undefined : values
+        interpolateMode === 'raw' ? undefined : values,
+        visitedLinkStack
       )
 
       if (this._isFallbackRoot(translated)) {
@@ -282,7 +296,7 @@ export default class VueI18n {
         }
         /* istanbul ignore if */
         if (!this._root) { throw Error('unexpected error') }
-        const root: any = this._root
+        const root: any = this._root.$i18n
         translated = root._translate(
           root._getMessages(), root.locale, root.fallbackLocale,
           linkPlaceholder, host, interpolateMode, values
@@ -292,6 +306,8 @@ export default class VueI18n {
         locale, linkPlaceholder, translated, host,
         Array.isArray(values) ? values : [values]
       )
+
+      visitedLinkStack.pop()
 
       // Replace the link with the translated
       ret = !translated ? ret : ret.replace(link, translated)
@@ -317,10 +333,10 @@ export default class VueI18n {
     args: any
   ): any {
     let res: any =
-      this._interpolate(locale, messages[locale], key, host, interpolateMode, args)
+      this._interpolate(locale, messages[locale], key, host, interpolateMode, args, [key])
     if (!isNull(res)) { return res }
 
-    res = this._interpolate(fallback, messages[fallback], key, host, interpolateMode, args)
+    res = this._interpolate(fallback, messages[fallback], key, host, interpolateMode, args, [key])
     if (!isNull(res)) {
       if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
         warn(`Fall back to translate the keypath '${key}' with '${fallback}' locale.`)
@@ -347,7 +363,7 @@ export default class VueI18n {
       }
       /* istanbul ignore if */
       if (!this._root) { throw Error('unexpected error') }
-      return this._root.t(key, ...values)
+      return this._root.$t(key, ...values)
     } else {
       return this._warnDefault(locale, key, ret, host, values)
     }
@@ -365,7 +381,7 @@ export default class VueI18n {
         warn(`Fall back to interpolate the keypath '${key}' with root locale.`)
       }
       if (!this._root) { throw Error('unexpected error') }
-      return this._root.i(key, locale, values)
+      return this._root.$i18n.i(key, locale, values)
     } else {
       return this._warnDefault(locale, key, ret, host, [values])
     }
@@ -394,7 +410,41 @@ export default class VueI18n {
     if (choice === undefined) {
       choice = 1
     }
-    return fetchChoice(this._t(key, _locale, messages, host, ...values), choice)
+
+    const predefined = { 'count': choice, 'n': choice }
+    const parsedArgs = parseArgs(...values)
+    parsedArgs.params = Object.assign(predefined, parsedArgs.params)
+    values = parsedArgs.locale === null ? [parsedArgs.params] : [parsedArgs.locale, parsedArgs.params]
+    return this.fetchChoice(this._t(key, _locale, messages, host, ...values), choice)
+  }
+
+  fetchChoice (message: string, choice: number): ?string {
+    /* istanbul ignore if */
+    if (!message && typeof message !== 'string') { return null }
+    const choices: Array<string> = message.split('|')
+
+    choice = this.getChoiceIndex(choice, choices.length)
+    if (!choices[choice]) { return message }
+    return choices[choice].trim()
+  }
+
+  /**
+   * @param choice {number} a choice index given by the input to $tc: `$tc('path.to.rule', choiceIndex)`
+   * @param choicesLength {number} an overall amount of available choices
+   * @returns a final choice index
+  */
+  getChoiceIndex (choice: number, choicesLength: number): number {
+    choice = Math.abs(choice)
+
+    if (choicesLength === 2) {
+      return choice
+        ? choice > 1
+          ? 1
+          : 0
+        : 1
+    }
+
+    return choice ? Math.min(choice, 2) : 0
   }
 
   tc (key: Path, choice?: number, ...values: any): TranslateResult {
@@ -419,7 +469,7 @@ export default class VueI18n {
   }
 
   mergeLocaleMessage (locale: Locale, message: LocaleMessageObject): void {
-    this._vm.$set(this._vm.messages, locale, Vue.util.extend(this._vm.messages[locale] || {}, message))
+    this._vm.$set(this._vm.messages, locale, merge(this._vm.messages[locale] || {}, message))
   }
 
   getDateTimeFormat (locale: Locale): DateTimeFormat {
@@ -431,7 +481,7 @@ export default class VueI18n {
   }
 
   mergeDateTimeFormat (locale: Locale, format: DateTimeFormat): void {
-    this._vm.$set(this._vm.dateTimeFormats, locale, Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format))
+    this._vm.$set(this._vm.dateTimeFormats, locale, merge(this._vm.dateTimeFormats[locale] || {}, format))
   }
 
   _localizeDateTime (
@@ -485,7 +535,7 @@ export default class VueI18n {
       }
       /* istanbul ignore if */
       if (!this._root) { throw Error('unexpected error') }
-      return this._root.d(value, key, locale)
+      return this._root.$i18n.d(value, key, locale)
     } else {
       return ret || ''
     }
@@ -527,7 +577,7 @@ export default class VueI18n {
   }
 
   mergeNumberFormat (locale: Locale, format: NumberFormat): void {
-    this._vm.$set(this._vm.numberFormats, locale, Vue.util.extend(this._vm.numberFormats[locale] || {}, format))
+    this._vm.$set(this._vm.numberFormats, locale, merge(this._vm.numberFormats[locale] || {}, format))
   }
 
   _localizeNumber (
@@ -572,8 +622,10 @@ export default class VueI18n {
 
   _n (value: number, locale: Locale, key: ?string, options: ?NumberFormatOptions): NumberFormatResult {
     /* istanbul ignore if */
-    if (process.env.NODE_ENV !== 'production' && !VueI18n.availabilities.numberFormat) {
-      warn('Cannot format a Number value due to not supported Intl.NumberFormat.')
+    if (!VueI18n.availabilities.numberFormat) {
+      if (process.env.NODE_ENV !== 'production') {
+        warn('Cannot format a Number value due to not supported Intl.NumberFormat.')
+      }
       return ''
     }
 
@@ -590,7 +642,7 @@ export default class VueI18n {
       }
       /* istanbul ignore if */
       if (!this._root) { throw Error('unexpected error') }
-      return this._root.n(value, Object.assign({}, { key, locale }, options))
+      return this._root.$i18n.n(value, Object.assign({}, { key, locale }, options))
     } else {
       return ret || ''
     }

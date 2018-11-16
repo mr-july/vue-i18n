@@ -13,13 +13,22 @@ export default {
       linkEnd: 'This is a linked translation to @:message.hello',
       linkWithin: 'Isn\'t @:message.hello we live in great?',
       linkMultiple: 'Hello @:message.hoge!, isn\'t @:message.hello great?',
+      linkBrackets: 'Hello @:(message.hoge). Isn\'t @:(message.hello) great?',
       linkHyphen: '@:hyphen-hello',
       linkUnderscore: '@:underscore_hello',
       linkList: '@:message.hello: {0} {1}',
+      circular1: 'Foo @:message.circular2',
+      circular2: 'Bar @:message.circular3',
+      circular3: 'Buz @:message.circular1',
+      linkTwice: '@:message.hello: @:message.hello',
       'hyphen-locale': 'hello hyphen',
       '1234': 'Number-based keys are found',
-      '1mixedKey': 'Mixed keys are not found.'
+      '1mixedKey': 'Mixed keys are not found.',
+      'sálvame': 'save me'
     },
+    '0123a': 'Starts with number and contains non-number',
+    '01234': 'Numeric only',
+    '日本語': 'Japanese',
     'hello world': 'Hello World',
     'Hello {0}': 'Hello {0}',
     'continue-with-new-account': 'continue with new account',
@@ -62,10 +71,15 @@ export default {
       fallback1: 'これはフォールバック',
       'hyphen-locale': 'こんにちは、ハイフン',
       '1234': '数字ベースのキーは見つかりませんでした。',
-      '1mixedKey': 'ミックスされたキーは見つかりませんでした。'
+      '1mixedKey': 'ミックスされたキーは見つかりませんでした。',
+      'sálvame': '私を助けて'
     },
+    '01234': '数字のみ',
+    '12345a': '数字で始まり、数字以外を含む',
+    '日本語': '日本語',
     plurals: {
       car: 'ザ・ワールド | これはフォールバック',
+      implicitPluralCount: 'こっちには来ない | count:{count}, n:{n}',
       format: {
         named: 'こんにちは {name}, ごきげんいかが？ | こんにちは {name}, ごきげんいかが？',
         list: 'こんにちは {0}, ごきげんいかが？| こんにちは {0}, ごきげんいかが？'

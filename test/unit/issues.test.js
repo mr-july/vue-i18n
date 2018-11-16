@@ -1,5 +1,7 @@
 import messages from './fixture/index'
 import { parse } from '../../src/format'
+import VueI18n from '../../src'
+const compiler = require('vue-template-compiler')
 
 describe('issues', () => {
   let vm, i18n
@@ -31,7 +33,7 @@ describe('issues', () => {
   })
 
   describe('#42, #43', () => {
-    it('should not be occured error', () => {
+    it('should not be occurred error', () => {
       assert.equal(
         vm.$t('message[\'hello\']'),
         messages[vm.$i18n.locale]['message']['hello']
@@ -254,6 +256,19 @@ describe('issues', () => {
     })
   })
 
+  describe('#200', () => {
+    it('should be translated', () => {
+      const el = document.createElement('div')
+      const Constructor = Vue.extend({ i18n })
+      const vm = new Constructor({
+        render (h) {
+          return h('p', { ref: 'text' }, [this.$t('message.hello')])
+        }
+      }).$mount(el)
+      assert.equal(vm.$refs.text.textContent, messages.en.message.hello)
+    })
+  })
+
   describe('#203', () => {
     it('should be translated', done => {
       const App = {
@@ -286,32 +301,242 @@ describe('issues', () => {
     })
   })
 
-  describe('#259', () => {
-    it('this points to the right', (done) => {
+  describe('#247', () => {
+    it('should be warned if circular reference in linked locale message', () => {
+      const spy = sinon.spy(console, 'warn')
+      assert.strictEqual(vm.$i18n.t('message.circular1'), 'Foo Bar Buz @:message.circular1')
+      assert(spy.notCalled === false)
+      assert(spy.callCount === 1)
+      spy.restore()
+    })
+
+    it('should not be warned if same non-circular link used repeatedly', () => {
+      const spy = sinon.spy(console, 'warn')
+      assert.strictEqual(vm.$i18n.t('message.linkTwice'), 'the world: the world')
+      assert(spy.notCalled === true)
+      assert(spy.callCount === 0)
+      spy.restore()
+    })
+  })
+
+  describe('#377', () => {
+    it('should be destroyed', done => {
+      const el = document.createElement('div')
+      const template = `<div id="app">
+        <p>TIMEOUT : {{ timeout }}</p>
+        <div ref="el1" v-if="!timeout">
+          <span v-t="'SHOULD_NOT_DISPLAY_WHEN_TIMEOUT_EQUAL_TRUE'"></span>
+        </div>
+        <div ref="el2" v-if="timeout">
+          <span class="">{{ $t('CANNOT_REPRODUCE_WITHOUT_THIS') }}</span>
+        </div>
+      </div>`
+      const { render, staticRenderFns } = compiler.compileToFunctions(template)
+      const vm = new Vue({
+        i18n: new VueI18n({ locale: 'id' }),
+        data () {
+          return { timeout: false }
+        },
+        methods: {
+          startLoading: function () {
+            this.timeout = true
+            setTimeout(() => {
+              this.timeout = false
+            }, 100)
+          }
+        },
+        render,
+        staticRenderFns
+      }).$mount(el)
+
+      Vue.nextTick(() => {
+        assert.equal(vm.$refs.el1.outerHTML, '<div><span>SHOULD_NOT_DISPLAY_WHEN_TIMEOUT_EQUAL_TRUE</span></div>')
+        vm.startLoading()
+        delay(50).then(() => {
+          assert.equal(vm.$refs.el2.outerHTML, '<div><span>CANNOT_REPRODUCE_WITHOUT_THIS</span></div>')
+          delay(60).then(() => {
+            assert.equal(vm.$refs.el1.outerHTML, '<div><span>SHOULD_NOT_DISPLAY_WHEN_TIMEOUT_EQUAL_TRUE</span></div>')
+            done()
+          })
+        })
+      })
+    })
+  })
+
+  describe('#398', () => {
+    it('should return true', () => {
+      assert.strictEqual(vm.$te('0123a'), true)
+      assert.strictEqual(vm.$te('01234'), true)
+      assert.strictEqual(vm.$te('message.1234'), true)
+    })
+  })
+
+  describe('#430', () => {
+    it('should be translated', () => {
+      assert.strictEqual(
+        vm.$t('日本語'),
+        messages[vm.$i18n.locale]['日本語']
+      )
+      assert.strictEqual(
+        vm.$t('message.sálvame'),
+        messages[vm.$i18n.locale]['message']['sálvame']
+      )
+    })
+  })
+
+  describe('#78', () => {
+    it('should allow custom pluralization', () => {
+      const defaultImpl = VueI18n.prototype.getChoiceIndex
+      VueI18n.prototype.getChoiceIndex = function (choice, choicesLength) {
+        if (this.locale !== 'ru') {
+          return defaultImpl.apply(this, arguments)
+        }
+
+        if (choice === 0) {
+          return 0
+        }
+
+        const teen = choice > 10 && choice < 20
+        const endsWithOne = choice % 10 === 1
+
+        if (choicesLength < 4) {
+          return (!teen && endsWithOne) ? 1 : 2
+        }
+
+        if (!teen && endsWithOne) {
+          return 1
+        }
+
+        if (!teen && choice % 10 >= 2 && choice % 10 <= 4) {
+          return 2
+        }
+
+        return (choicesLength < 4) ? 2 : 3
+      }
+
+
+      i18n = new VueI18n({
+        locale: 'en',
+        messages: {
+          ru: {
+            car: '0 машин | 1 машина | {n} машины | {n} машин'
+          }
+        }
+      })
+      vm = new Vue({ i18n })
+
+      assert(vm.$tc('car', 0), '0 машин')
+      assert(vm.$tc('car', 1), '1 машина')
+      assert(vm.$tc('car', 2), '2 машины')
+      assert(vm.$tc('car', 4), '4 машины')
+      assert(vm.$tc('car', 12), '12 машин')
+      assert(vm.$tc('car', 21), '21 машина')
+    })
+  })
+
+  describe('#450', () => {
+    it('shoulbe be translated with v-t', done => {
       const vm = new Vue({
         i18n: new VueI18n({
           locale: 'en',
           messages: {
             en: {
-              'hello': 'hello #259'
-            },
-            ja: {
-              'hello': 'こんにちは #259'
+              hello: 'hi there!'
             }
           }
+        }),
+        render (h) {
+          // <p ref="text" v-t="'hello'"></p>
+          return h('p', { ref: 'text', directives: [{
+            name: 't', rawName: 'v-t', value: ('hello'), expression: "'hello'"
+          }] })
+        }
+      }).$mount(document.createElement('div'))
+
+      nextTick(() => {
+        assert.equal(vm.$refs.text.textContent, 'hi there!')
+      }).then(() => {
+        vm.$i18n.setLocaleMessage('en', {
+          hello: 'hello there!'
         })
+        vm.$forceUpdate()
+      }).then(() => {
+        assert.equal(vm.$refs.text.textContent, 'hello there!')
+      }).then(done)
+    })
+  })
+
+  describe('#453', () => {
+    it('should be handled root vm instance', done => {
+      const vm = new Vue({
+        i18n: new VueI18n({
+          locale: 'en',
+          missing: (locale, key, instance) => {
+            assert.equal('ja', locale)
+            assert.equal('foo.bar', key)
+            assert(vm === instance)
+            done()
+          }
+        }),
+        components: {
+          child: {
+            i18n: {
+              locale: 'ja'
+            },
+            render (h) {
+              return h('p', ['hello child'])
+            }
+          }
+        },
+        render (h) {
+          return h('div', [
+            h('child', { ref: 'child' })
+          ])
+        }
+      }).$mount()
+      vm.$nextTick(() => {
+        vm.$refs.child.$i18n.t('foo.bar', 'ja')
       })
-      const $t = vm.$t
-      const $tc = vm.$t
-      const $te = vm.$t
-      const $d = vm.$t
-      const $n = vm.$t
-      assert.equal($t('hello'), 'hello #259')
-      assert.equal($tc('hello'), 'hello #259')
-      assert.equal($te('hello'), 'hello #259')
-      assert.equal($d('hello'), 'hello #259')
-      assert.equal($n('hello'), 'hello #259')
-      done()
+    })
+  })
+
+  describe('#458', () => {
+    it('should be merged locale message', done => {
+      const vm = new Vue({
+        i18n: new VueI18n({
+          locale: 'en',
+          messages: {
+            hello: 'hello world!'
+          }
+        }),
+        render (h) {
+          return h('div', [
+            h('p', { ref: 'text1' }, [this.$t('key1')]),
+            h('p', { ref: 'text2' }, [this.$t('shared.key1')]),
+            h('p', { ref: 'text3' }, [this.$t('key2')]),
+            h('p', { ref: 'text4' }, [this.$t('shared.key2')])
+          ])
+        }
+      }).$mount()
+      nextTick(() => {
+        vm.$i18n.mergeLocaleMessage('en', {
+          key1: 'Hello Module 1',
+          shared: {
+            key1: 'Hello Module 1 shared key 1'
+          }
+        })
+        vm.$i18n.mergeLocaleMessage('en', {
+          key2: 'Hello Module 2',
+          shared: {
+            key2: 'Hello Module 2 shared key 2'
+          }
+        })
+      }).then(() => {
+        assert.equal(vm.$refs.text1.textContent, 'Hello Module 1')
+        assert.equal(vm.$refs.text2.textContent, 'Hello Module 1 shared key 1')
+        assert.equal(vm.$refs.text3.textContent, 'Hello Module 2')
+        assert.equal(vm.$refs.text4.textContent, 'Hello Module 2 shared key 2')
+      }).then(done)
     })
   })
 })
