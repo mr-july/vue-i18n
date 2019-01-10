@@ -1,5 +1,5 @@
 import Vue, { ComponentOptions } from 'vue';
-import VueI18n from "../index";
+import VueI18n, { DateTimeFormatOptions, NumberFormatOptions } from "../index";
 
 /*
 import * as VueI18n from 'vue-i18n';
@@ -27,11 +27,11 @@ VueI18n.availabilities;             // $ExpectType IntlAvailability
 const locale = 'locale';
 const key = 'key';
 const value = 'value';
-const dateTimeFormatOptions = {
+const dateTimeFormatOptions: DateTimeFormatOptions = {
   year: '2-digit',
   timeZone: 'Asia/Tokyo'
 };
-const numberFormatOptions = {
+const numberFormatOptions: NumberFormatOptions = {
   style: 'currency',
   currency: 'JPY'
 };
@@ -63,6 +63,7 @@ const i18n = new VueI18n({
   fallbackRoot: false,
   sync: true,
   silentTranslationWarn: true,
+  preserveDirectiveContent: true,
 });
 i18n.messages[locale][key];         // $ExpectType LocaleMessage
 i18n.dateTimeFormats[locale][key];  // $ExpectType DateTimeFormatOptions
@@ -72,6 +73,7 @@ i18n.fallbackLocale;                // $ExpectType string
 i18n.missing;                       // $ExpectType MissingHandler
 i18n.formatter;                     // $ExpectType Formatter
 i18n.silentTranslationWarn;         // $ExpectType boolean
+i18n.preserveDirectiveContent;      // $ExpectType boolean
 i18n.setLocaleMessage;              // $ExpectType (locale: string, message: LocaleMessageObject) => void
 i18n.getLocaleMessage;              // $ExpectType (locale: string) => LocaleMessageObject
 i18n.mergeLocaleMessage;            // $ExpectType (locale: string, message: LocaleMessageObject) => void

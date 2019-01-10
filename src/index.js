@@ -9,9 +9,7 @@ import {
   isObject,
   looseClone,
   remove,
-  merge,
-  canUseDateTimeFormat,
-  canUseNumberFormat
+  merge
 } from './util'
 import BaseFormatter from './format'
 import I18nPath from './path'
@@ -31,8 +29,15 @@ const numberFormatKeys = [
   'localeMatcher',
   'formatMatcher'
 ]
-const linkKeyMatcher = /(?:@:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g
+const linkKeyMatcher = /(?:@(?:\.[a-z]+)?:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g
+const linkKeyPrefixMatcher = /^@(?:\.([a-z]+))?:/
 const bracketsMatcher = /[()]/g
+const formatters = {
+  'upper': (str) => str.toLocaleUpperCase(),
+  'lower': (str) => str.toLocaleLowerCase()
+}
+
+const defaultFormatter = new BaseFormatter()
 
 export default class VueI18n {
   static install: () => void
@@ -54,6 +59,10 @@ export default class VueI18n {
   _numberFormatters: Object
   _path: I18nPath
   _dataListeners: Array<any>
+  pluralizationRules: {
+    [lang: string]: (choice: number, choicesLength: number) => number
+  }
+  preserveDirectiveContent: boolean
 
   constructor (options: I18nOptions = {}) {
     // Auto install if it is not done yet and `window` has `Vue`.
@@ -71,7 +80,7 @@ export default class VueI18n {
     const numberFormats = options.numberFormats || {}
 
     this._vm = null
-    this._formatter = options.formatter || new BaseFormatter()
+    this._formatter = options.formatter || defaultFormatter
     this._missing = options.missing || null
     this._root = options.root || null
     this._sync = options.sync === undefined ? true : !!options.sync
@@ -88,6 +97,11 @@ export default class VueI18n {
     this._numberFormatters = {}
     this._path = new I18nPath()
     this._dataListeners = []
+
+    this.pluralizationRules = options.pluralizationRules || {}
+    this.preserveDirectiveContent = options.preserveDirectiveContent === undefined
+      ? false
+      : !!options.preserveDirectiveContent
 
     this._exist = (message: Object, key: Path): boolean => {
       if (!message || !key) { return false }
@@ -242,11 +256,11 @@ export default class VueI18n {
     }
 
     // Check for the existence of links within the translated string
-    if (ret.indexOf('@:') >= 0) {
+    if (ret.indexOf('@:') >= 0 || ret.indexOf('@.') >= 0) {
       ret = this._link(locale, message, ret, host, interpolateMode, values, visitedLinkStack)
     }
 
-    return this._render(ret, interpolateMode, values)
+    return this._render(ret, interpolateMode, values, key)
   }
 
   _link (
@@ -271,8 +285,11 @@ export default class VueI18n {
         continue
       }
       const link: string = matches[idx]
-      // Remove the leading @: and the brackets
-      const linkPlaceholder: string = link.substr(2).replace(bracketsMatcher, '')
+      const linkKeyPrefixMatches: any = link.match(linkKeyPrefixMatcher)
+      const [linkPrefix, formatterName] = linkKeyPrefixMatches
+
+      // Remove the leading @:, @.case: and the brackets
+      const linkPlaceholder: string = link.replace(linkPrefix, '').replace(bracketsMatcher, '')
 
       if (visitedLinkStack.includes(linkPlaceholder)) {
         if (process.env.NODE_ENV !== 'production') {
@@ -306,6 +323,9 @@ export default class VueI18n {
         locale, linkPlaceholder, translated, host,
         Array.isArray(values) ? values : [values]
       )
+      if (formatters.hasOwnProperty(formatterName)) {
+        translated = formatters[formatterName](translated)
+      }
 
       visitedLinkStack.pop()
 
@@ -316,8 +336,14 @@ export default class VueI18n {
     return ret
   }
 
-  _render (message: string, interpolateMode: string, values: any): any {
-    const ret = this._formatter.interpolate(message, values)
+  _render (message: string, interpolateMode: string, values: any, path: string): any {
+    let ret = this._formatter.interpolate(message, values, path)
+
+    // If the custom formatter refuses to work - apply the default one
+    if (!ret) {
+      ret = defaultFormatter.interpolate(message, values, path)
+    }
+
     // if interpolateMode is **not** 'string' ('row'),
     // return the compiled data (e.g. ['foo', VNode, 'bar']) with formatter
     return interpolateMode === 'string' ? ret.join('') : ret
@@ -434,17 +460,26 @@ export default class VueI18n {
    * @returns a final choice index
   */
   getChoiceIndex (choice: number, choicesLength: number): number {
-    choice = Math.abs(choice)
+    // Default (old) getChoiceIndex implementation - english-compatible
+    const defaultImpl = (_choice: number, _choicesLength: number) => {
+      _choice = Math.abs(_choice)
 
-    if (choicesLength === 2) {
-      return choice
-        ? choice > 1
-          ? 1
-          : 0
-        : 1
+      if (_choicesLength === 2) {
+        return _choice
+          ? _choice > 1
+            ? 1
+            : 0
+          : 1
+      }
+
+      return _choice ? Math.min(_choice, 2) : 0
     }
 
-    return choice ? Math.min(choice, 2) : 0
+    if (this.locale in this.pluralizationRules) {
+      return this.pluralizationRules[this.locale].apply(this, [choice, choicesLength])
+    } else {
+      return defaultImpl(choice, choicesLength)
+    }
   }
 
   tc (key: Path, choice?: number, ...values: any): TranslateResult {
@@ -685,9 +720,20 @@ export default class VueI18n {
   }
 }
 
-VueI18n.availabilities = {
-  dateTimeFormat: canUseDateTimeFormat,
-  numberFormat: canUseNumberFormat
-}
+let availabilities: IntlAvailability
+// $FlowFixMe
+Object.defineProperty(VueI18n, 'availabilities', {
+  get () {
+    if (!availabilities) {
+      const intlDefined = typeof Intl !== 'undefined'
+      availabilities = {
+        dateTimeFormat: intlDefined && typeof Intl.DateTimeFormat !== 'undefined',
+        numberFormat: intlDefined && typeof Intl.NumberFormat !== 'undefined'
+      }
+    }
+
+    return availabilities
+  }
+})
 VueI18n.install = install
 VueI18n.version = '__VERSION__'

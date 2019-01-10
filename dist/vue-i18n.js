@@ -1,6 +1,6 @@
 /*!
- * vue-i18n v8.3.2 
- * (c) 2018 kazuya kawaguchi
+ * vue-i18n v8.7.0 
+ * (c) 2019 kazuya kawaguchi
  * Released under the MIT License.
  */
 (function (global, factory) {
@@ -137,12 +137,6 @@
     }
   }
 
-  var canUseDateTimeFormat =
-    typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat !== 'undefined';
-
-  var canUseNumberFormat =
-    typeof Intl !== 'undefined' && typeof Intl.NumberFormat !== 'undefined';
-
   /*  */
 
   function extend (Vue) {
@@ -216,22 +210,6 @@
               }
             }
           }
-<<<<<<< HEAD
-        }
-        this._i18n = options.i18n;
-        this._i18nWatcher = this._i18n.watchI18nData();
-        this._i18n.subscribeDataChanging(this);
-        this._subscribing = true;
-      } else if (isPlainObject(options.i18n)) {
-        // component local i18n
-        if (this.$root && this.$root.$i18n && this.$root.$i18n instanceof VueI18n) {
-          options.i18n.root = this.$root.$i18n;
-          options.i18n.formatter = this.$root.$i18n.formatter;
-          options.i18n.fallbackLocale = this.$root.$i18n.fallbackLocale;
-          options.i18n.silentTranslationWarn = this.$root.$i18n.silentTranslationWarn;
-          options.i18n.silentRootFallbackWarn = this.$root.$i18n.silentRootFallbackWarn;
-        }
-=======
           this._i18n = options.i18n;
           this._i18nWatcher = this._i18n.watchI18nData();
           this._i18n.subscribeDataChanging(this);
@@ -243,8 +221,10 @@
             options.i18n.formatter = this.$root.$i18n.formatter;
             options.i18n.fallbackLocale = this.$root.$i18n.fallbackLocale;
             options.i18n.silentTranslationWarn = this.$root.$i18n.silentTranslationWarn;
+            options.i18n.silentRootFallbackWarn = this.$root.$i18n.silentRootFallbackWarn;
+            options.i18n.pluralizationRules = this.$root.$i18n.pluralizationRules;
+            options.i18n.preserveDirectiveContent = this.$root.$i18n.preserveDirectiveContent;
           }
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
 
           // init locale messages via custom blocks
           if (options.__i18n) {
@@ -417,7 +397,10 @@
       return
     }
 
-    el.textContent = '';
+    var i18n = vnode.context.$i18n || {};
+    if (!binding.modifiers.preserve && !i18n.preserveDirectiveContent) {
+      el.textContent = '';
+    }
     el._vt = undefined;
     delete el['_vt'];
     el._locale = undefined;
@@ -958,8 +941,15 @@
     'localeMatcher',
     'formatMatcher'
   ];
-  var linkKeyMatcher = /(?:@:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g;
+  var linkKeyMatcher = /(?:@(?:\.[a-z]+)?:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g;
+  var linkKeyPrefixMatcher = /^@(?:\.([a-z]+))?:/;
   var bracketsMatcher = /[()]/g;
+  var formatters = {
+    'upper': function (str) { return str.toLocaleUpperCase(); },
+    'lower': function (str) { return str.toLocaleLowerCase(); }
+  };
+
+  var defaultFormatter = new BaseFormatter();
 
   var VueI18n = function VueI18n (options) {
     var this$1 = this;
@@ -980,7 +970,7 @@
     var numberFormats = options.numberFormats || {};
 
     this._vm = null;
-    this._formatter = options.formatter || new BaseFormatter();
+    this._formatter = options.formatter || defaultFormatter;
     this._missing = options.missing || null;
     this._root = options.root || null;
     this._sync = options.sync === undefined ? true : !!options.sync;
@@ -990,10 +980,18 @@
     this._silentTranslationWarn = options.silentTranslationWarn === undefined
       ? false
       : !!options.silentTranslationWarn;
+    this._silentRootFallbackWarn = options.silentRootFallbackWarn === undefined
+      ? false
+      : !!options.silentRootFallbackWarn;
     this._dateTimeFormatters = {};
     this._numberFormatters = {};
     this._path = new I18nPath();
     this._dataListeners = [];
+
+    this.pluralizationRules = options.pluralizationRules || {};
+    this.preserveDirectiveContent = options.preserveDirectiveContent === undefined
+      ? false
+      : !!options.preserveDirectiveContent;
 
     this._exist = function (message, key) {
       if (!message || !key) { return false }
@@ -1009,7 +1007,7 @@
     });
   };
 
-  var prototypeAccessors = { vm: { configurable: true },messages: { configurable: true },dateTimeFormats: { configurable: true },numberFormats: { configurable: true },locale: { configurable: true },fallbackLocale: { configurable: true },missing: { configurable: true },formatter: { configurable: true },silentTranslationWarn: { configurable: true } };
+  var prototypeAccessors = { vm: { configurable: true },messages: { configurable: true },dateTimeFormats: { configurable: true },numberFormats: { configurable: true },locale: { configurable: true },fallbackLocale: { configurable: true },missing: { configurable: true },formatter: { configurable: true },silentTranslationWarn: { configurable: true },silentRootFallbackWarn: { configurable: true } };
 
   VueI18n.prototype._initVM = function _initVM (data) {
     var silent = Vue.config.silent;
@@ -1073,6 +1071,9 @@
   prototypeAccessors.silentTranslationWarn.get = function () { return this._silentTranslationWarn };
   prototypeAccessors.silentTranslationWarn.set = function (silent) { this._silentTranslationWarn = silent; };
 
+  prototypeAccessors.silentRootFallbackWarn.get = function () { return this._silentRootFallbackWarn };
+  prototypeAccessors.silentRootFallbackWarn.set = function (silent) { this._silentRootFallbackWarn = silent; };
+
   VueI18n.prototype._getMessages = function _getMessages () { return this._vm.messages };
   VueI18n.prototype._getDateTimeFormats = function _getDateTimeFormats () { return this._vm.dateTimeFormats };
   VueI18n.prototype._getNumberFormats = function _getNumberFormats () { return this._vm.numberFormats };
@@ -1095,157 +1096,6 @@
     return key
   };
 
-<<<<<<< HEAD
-    ret = last;
-    return ret
-  }
-};
-
-/*  */
-
-var numberFormatKeys = [
-  'style',
-  'currency',
-  'currencyDisplay',
-  'useGrouping',
-  'minimumIntegerDigits',
-  'minimumFractionDigits',
-  'maximumFractionDigits',
-  'minimumSignificantDigits',
-  'maximumSignificantDigits',
-  'localeMatcher',
-  'formatMatcher'
-];
-
-var VueI18n = function VueI18n (options) {
-  var this$1 = this;
-  if ( options === void 0 ) options = {};
-
-  // Auto install if it is not done yet and `window` has `Vue`.
-  // To allow users to avoid auto-installation in some cases,
-  // this code should be placed here. See #290
-  /* istanbul ignore if */
-  if (!Vue && typeof window !== 'undefined' && window.Vue) {
-    install(window.Vue);
-  }
-
-  var locale = options.locale || 'en-US';
-  var fallbackLocale = options.fallbackLocale || 'en-US';
-  var messages = options.messages || {};
-  var dateTimeFormats = options.dateTimeFormats || {};
-  var numberFormats = options.numberFormats || {};
-
-  this._vm = null;
-  this._formatter = options.formatter || new BaseFormatter();
-  this._missing = options.missing || null;
-  this._root = options.root || null;
-  this._sync = options.sync === undefined ? true : !!options.sync;
-  this._fallbackRoot = options.fallbackRoot === undefined
-    ? true
-    : !!options.fallbackRoot;
-  this._silentTranslationWarn = options.silentTranslationWarn === undefined
-    ? false
-    : !!options.silentTranslationWarn;
-  this._silentRootFallbackWarn = options.silentRootFallbackWarn === undefined
-    ? false
-    : !!options.silentRootFallbackWarn;
-  this._dateTimeFormatters = {};
-  this._numberFormatters = {};
-  this._path = new I18nPath();
-  this._dataListeners = [];
-
-  this._exist = function (message, key) {
-    if (!message || !key) { return false }
-    return !isNull(this$1._path.getPathValue(message, key))
-  };
-
-  this._initVM({
-    locale: locale,
-    fallbackLocale: fallbackLocale,
-    messages: messages,
-    dateTimeFormats: dateTimeFormats,
-    numberFormats: numberFormats
-  });
-};
-
-var prototypeAccessors = { vm: {},messages: {},dateTimeFormats: {},numberFormats: {},locale: {},fallbackLocale: {},missing: {},formatter: {},silentTranslationWarn: {},silentRootFallbackWarn: {} };
-
-VueI18n.prototype._initVM = function _initVM (data) {
-  var silent = Vue.config.silent;
-  Vue.config.silent = true;
-  this._vm = new Vue({ data: data });
-  Vue.config.silent = silent;
-};
-
-VueI18n.prototype.subscribeDataChanging = function subscribeDataChanging (vm) {
-  this._dataListeners.push(vm);
-};
-
-VueI18n.prototype.unsubscribeDataChanging = function unsubscribeDataChanging (vm) {
-  remove(this._dataListeners, vm);
-};
-
-VueI18n.prototype.watchI18nData = function watchI18nData () {
-  var self = this;
-  return this._vm.$watch('$data', function () {
-    var i = self._dataListeners.length;
-    while (i--) {
-      Vue.nextTick(function () {
-        self._dataListeners[i] && self._dataListeners[i].$forceUpdate();
-      });
-    }
-  }, { deep: true })
-};
-
-VueI18n.prototype.watchLocale = function watchLocale () {
-  /* istanbul ignore if */
-  if (!this._sync || !this._root) { return null }
-  var target = this._vm;
-  return this._root.vm.$watch('locale', function (val) {
-    target.$set(target, 'locale', val);
-    target.$forceUpdate();
-  }, { immediate: true })
-};
-
-prototypeAccessors.vm.get = function () { return this._vm };
-
-prototypeAccessors.messages.get = function () { return looseClone(this._getMessages()) };
-prototypeAccessors.dateTimeFormats.get = function () { return looseClone(this._getDateTimeFormats()) };
-prototypeAccessors.numberFormats.get = function () { return looseClone(this._getNumberFormats()) };
-
-prototypeAccessors.locale.get = function () { return this._vm.locale };
-prototypeAccessors.locale.set = function (locale) {
-  this._vm.$set(this._vm, 'locale', locale);
-};
-
-prototypeAccessors.fallbackLocale.get = function () { return this._vm.fallbackLocale };
-prototypeAccessors.fallbackLocale.set = function (locale) {
-  this._vm.$set(this._vm, 'fallbackLocale', locale);
-};
-
-prototypeAccessors.missing.get = function () { return this._missing };
-prototypeAccessors.missing.set = function (handler) { this._missing = handler; };
-
-prototypeAccessors.formatter.get = function () { return this._formatter };
-prototypeAccessors.formatter.set = function (formatter) { this._formatter = formatter; };
-
-prototypeAccessors.silentTranslationWarn.get = function () { return this._silentTranslationWarn };
-prototypeAccessors.silentTranslationWarn.set = function (silent) { this._silentTranslationWarn = silent; };
-
-prototypeAccessors.silentRootFallbackWarn.get = function () { return this._silentRootFallbackWarn };
-prototypeAccessors.silentRootFallbackWarn.set = function (silent) { this._silentRootFallbackWarn = silent; };
-
-VueI18n.prototype._getMessages = function _getMessages () { return this._vm.messages };
-VueI18n.prototype._getDateTimeFormats = function _getDateTimeFormats () { return this._vm.dateTimeFormats };
-VueI18n.prototype._getNumberFormats = function _getNumberFormats () { return this._vm.numberFormats };
-
-VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm, values) {
-  if (!isNull(result)) { return result }
-  if (this._missing) {
-    var missingRet = this._missing.apply(null, [locale, key, vm, values]);
-    if (typeof missingRet === 'string') {
-      return missingRet
-=======
   VueI18n.prototype._isFallbackRoot = function _isFallbackRoot (val) {
     return !val && !isNull(this._root) && this._fallbackRoot
   };
@@ -1270,7 +1120,8 @@ VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm,
       if (isPlainObject(message)) {
         ret = message[key];
         if (typeof ret !== 'string') {
-          if (!this._silentTranslationWarn) {
+          if (!this._silentTranslationWarn &&
+            (!this._silentRootFallbackWarn || !this._isFallbackRoot(ret))) {
             warn(("Value of key '" + key + "' is not a string!"));
           }
           return null
@@ -1291,12 +1142,11 @@ VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm,
     }
 
     // Check for the existence of links within the translated string
-    if (ret.indexOf('@:') >= 0) {
+    if (ret.indexOf('@:') >= 0 || ret.indexOf('@.') >= 0) {
       ret = this._link(locale, message, ret, host, interpolateMode, values, visitedLinkStack);
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
     }
 
-    return this._render(ret, interpolateMode, values)
+    return this._render(ret, interpolateMode, values, key)
   };
 
   VueI18n.prototype._link = function _link (
@@ -1323,8 +1173,12 @@ VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm,
         continue
       }
       var link = matches[idx];
-      // Remove the leading @: and the brackets
-      var linkPlaceholder = link.substr(2).replace(bracketsMatcher, '');
+      var linkKeyPrefixMatches = link.match(linkKeyPrefixMatcher);
+      var linkPrefix = linkKeyPrefixMatches[0];
+        var formatterName = linkKeyPrefixMatches[1];
+
+      // Remove the leading @:, @.case: and the brackets
+      var linkPlaceholder = link.replace(linkPrefix, '').replace(bracketsMatcher, '');
 
       if (visitedLinkStack.includes(linkPlaceholder)) {
         {
@@ -1341,44 +1195,10 @@ VueI18n.prototype._warnDefault = function _warnDefault (locale, key, result, vm,
         interpolateMode === 'raw' ? undefined : values,
         visitedLinkStack
       );
-<<<<<<< HEAD
-    }
-  }
-  return key
-};
-
-VueI18n.prototype._isFallbackRoot = function _isFallbackRoot (val) {
-  return !val && !isNull(this._root) && this._fallbackRoot
-};
-
-VueI18n.prototype._interpolate = function _interpolate (
-  locale,
-  message,
-  key,
-  host,
-  interpolateMode,
-  values
-) {
-  if (!message) { return null }
-
-  var pathRet = this._path.getPathValue(message, key);
-  if (Array.isArray(pathRet) || isPlainObject(pathRet)) { return pathRet }
-
-  var ret;
-  if (isNull(pathRet)) {
-    /* istanbul ignore else */
-    if (isPlainObject(message)) {
-      ret = message[key];
-      if (typeof ret !== 'string') {
-        if ("development" !== 'production' && !this._silentTranslationWarn &&
-          (!this._silentRootFallbackWarn || !this._isFallbackRoot(ret))) {
-          warn(("Value of key '" + key + "' is not a string!"));
-=======
 
       if (this$1._isFallbackRoot(translated)) {
         if (!this$1._silentTranslationWarn) {
           warn(("Fall back to translate the link placeholder '" + linkPlaceholder + "' with root locale."));
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
         }
         /* istanbul ignore if */
         if (!this$1._root) { throw Error('unexpected error') }
@@ -1392,6 +1212,9 @@ VueI18n.prototype._interpolate = function _interpolate (
         locale, linkPlaceholder, translated, host,
         Array.isArray(values) ? values : [values]
       );
+      if (formatters.hasOwnProperty(formatterName)) {
+        translated = formatters[formatterName](translated);
+      }
 
       visitedLinkStack.pop();
 
@@ -1402,8 +1225,14 @@ VueI18n.prototype._interpolate = function _interpolate (
     return ret
   };
 
-  VueI18n.prototype._render = function _render (message, interpolateMode, values) {
-    var ret = this._formatter.interpolate(message, values);
+  VueI18n.prototype._render = function _render (message, interpolateMode, values, path) {
+    var ret = this._formatter.interpolate(message, values, path);
+
+    // If the custom formatter refuses to work - apply the default one
+    if (!ret) {
+      ret = defaultFormatter.interpolate(message, values, path);
+    }
+
     // if interpolateMode is **not** 'string' ('row'),
     // return the compiled data (e.g. ['foo', VNode, 'bar']) with formatter
     return interpolateMode === 'string' ? ret.join('') : ret
@@ -1448,7 +1277,7 @@ VueI18n.prototype._interpolate = function _interpolate (
       host, 'string', parsedArgs.params
     );
     if (this._isFallbackRoot(ret)) {
-      if (!this._silentTranslationWarn) {
+      if (!this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(("Fall back to translate the keypath '" + key + "' with root locale."));
       }
       /* istanbul ignore if */
@@ -1471,7 +1300,7 @@ VueI18n.prototype._interpolate = function _interpolate (
     var ret =
       this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values);
     if (this._isFallbackRoot(ret)) {
-      if (!this._silentTranslationWarn) {
+      if (!this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
       }
       if (!this._root) { throw Error('unexpected error') }
@@ -1492,15 +1321,6 @@ VueI18n.prototype._interpolate = function _interpolate (
     return this._i(key, locale, this._getMessages(), null, values)
   };
 
-<<<<<<< HEAD
-  var ret = this._translate(
-    messages, locale, this.fallbackLocale, key,
-    host, 'string', parsedArgs.params
-  );
-  if (this._isFallbackRoot(ret)) {
-    if ("development" !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-      warn(("Fall back to translate the keypath '" + key + "' with root locale."));
-=======
   VueI18n.prototype._tc = function _tc (
     key,
     _locale,
@@ -1515,7 +1335,6 @@ VueI18n.prototype._interpolate = function _interpolate (
     if (!key) { return '' }
     if (choice === undefined) {
       choice = 1;
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
     }
 
     var predefined = { 'count': choice, 'n': choice };
@@ -1527,37 +1346,6 @@ VueI18n.prototype._interpolate = function _interpolate (
 
   VueI18n.prototype.fetchChoice = function fetchChoice (message, choice) {
     /* istanbul ignore if */
-<<<<<<< HEAD
-    if (!this._root) { throw Error('unexpected error') }
-    return (ref = this._root).t.apply(ref, [ key ].concat( values ))
-  } else {
-    return this._warnDefault(locale, key, ret, host, values)
-  }
-    var ref;
-};
-
-VueI18n.prototype.t = function t (key) {
-    var values = [], len = arguments.length - 1;
-    while ( len-- > 0 ) values[ len ] = arguments[ len + 1 ];
-
-  return (ref = this)._t.apply(ref, [ key, this.locale, this._getMessages(), null ].concat( values ))
-    var ref;
-};
-
-VueI18n.prototype._i = function _i (key, locale, messages, host, values) {
-  var ret =
-    this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values);
-  if (this._isFallbackRoot(ret)) {
-    if ("development" !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-      warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
-      }
-    if (!this._root) { throw Error('unexpected error') }
-    return this._root.i(key, locale, values)
-  } else {
-    return this._warnDefault(locale, key, ret, host, [values])
-  }
-};
-=======
     if (!message && typeof message !== 'string') { return null }
     var choices = message.split('|');
 
@@ -1572,121 +1360,31 @@ VueI18n.prototype._i = function _i (key, locale, messages, host, values) {
    * @returns a final choice index
   */
   VueI18n.prototype.getChoiceIndex = function getChoiceIndex (choice, choicesLength) {
-    choice = Math.abs(choice);
+    // Default (old) getChoiceIndex implementation - english-compatible
+    var defaultImpl = function (_choice, _choicesLength) {
+      _choice = Math.abs(_choice);
 
-    if (choicesLength === 2) {
-      return choice
-        ? choice > 1
-          ? 1
-          : 0
-        : 1
+      if (_choicesLength === 2) {
+        return _choice
+          ? _choice > 1
+            ? 1
+            : 0
+          : 1
+      }
+
+      return _choice ? Math.min(_choice, 2) : 0
+    };
+
+    if (this.locale in this.pluralizationRules) {
+      return this.pluralizationRules[this.locale].apply(this, [choice, choicesLength])
+    } else {
+      return defaultImpl(choice, choicesLength)
     }
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
-
-    return choice ? Math.min(choice, 2) : 0
   };
 
   VueI18n.prototype.tc = function tc (key, choice) {
       var ref;
 
-<<<<<<< HEAD
-  return this._i(key, locale, this._getMessages(), null, values)
-};
-
-VueI18n.prototype._tc = function _tc (
-  key,
-  _locale,
-  messages,
-  host,
-  choice
-) {
-    var values = [], len = arguments.length - 5;
-    while ( len-- > 0 ) values[ len ] = arguments[ len + 5 ];
-
-  if (!key) { return '' }
-  if (choice === undefined) {
-    choice = 1;
-  }
-  return fetchChoice((ref = this)._t.apply(ref, [ key, _locale, messages, host ].concat( values )), choice)
-    var ref;
-};
-
-VueI18n.prototype.tc = function tc (key, choice) {
-    var values = [], len = arguments.length - 2;
-    while ( len-- > 0 ) values[ len ] = arguments[ len + 2 ];
-
-  return (ref = this)._tc.apply(ref, [ key, this.locale, this._getMessages(), null, choice ].concat( values ))
-    var ref;
-};
-
-VueI18n.prototype._te = function _te (key, locale, messages) {
-    var args = [], len = arguments.length - 3;
-    while ( len-- > 0 ) args[ len ] = arguments[ len + 3 ];
-
-  var _locale = parseArgs.apply(void 0, args).locale || locale;
-  return this._exist(messages[_locale], key)
-};
-
-VueI18n.prototype.te = function te (key, locale) {
-  return this._te(key, this.locale, this._getMessages(), locale)
-};
-
-VueI18n.prototype.getLocaleMessage = function getLocaleMessage (locale) {
-  return looseClone(this._vm.messages[locale] || {})
-};
-
-VueI18n.prototype.setLocaleMessage = function setLocaleMessage (locale, message) {
-  this._vm.$set(this._vm.messages, locale, message);
-};
-
-VueI18n.prototype.mergeLocaleMessage = function mergeLocaleMessage (locale, message) {
-  this._vm.$set(this._vm.messages, locale, Vue.util.extend(this._vm.messages[locale] || {}, message));
-};
-
-VueI18n.prototype.getDateTimeFormat = function getDateTimeFormat (locale) {
-  return looseClone(this._vm.dateTimeFormats[locale] || {})
-};
-
-VueI18n.prototype.setDateTimeFormat = function setDateTimeFormat (locale, format) {
-  this._vm.$set(this._vm.dateTimeFormats, locale, format);
-};
-
-VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, format) {
-  this._vm.$set(this._vm.dateTimeFormats, locale, Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format));
-  };
-
-VueI18n.prototype._localizeDateTime = function _localizeDateTime (
-  value,
-  locale,
-  fallback,
-  dateTimeFormats,
-  key
-) {
-  var _locale = locale;
-  var formats = dateTimeFormats[_locale];
-
-  // fallback locale
-  if (isNull(formats) || isNull(formats[key])) {
-    if ("development" !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-      warn(("Fall back to '" + fallback + "' datetime formats from '" + locale + " datetime formats."));
-    }
-    _locale = fallback;
-    formats = dateTimeFormats[_locale];
-  }
-
-  if (isNull(formats) || isNull(formats[key])) {
-    return null
-  } else {
-    var format = formats[key];
-      var id = _locale + "__" + key;
-    var formatter = this._dateTimeFormatters[id];
-    if (!formatter) {
-      formatter = this._dateTimeFormatters[id] = new Intl.DateTimeFormat(_locale, format);
-    }
-    return formatter.format(value)
-  }
-};
-=======
       var values = [], len = arguments.length - 2;
       while ( len-- > 0 ) values[ len ] = arguments[ len + 2 ];
     return (ref = this)._tc.apply(ref, [ key, this.locale, this._getMessages(), null, choice ].concat( values ))
@@ -1695,7 +1393,6 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
   VueI18n.prototype._te = function _te (key, locale, messages) {
       var args = [], len = arguments.length - 3;
       while ( len-- > 0 ) args[ len ] = arguments[ len + 3 ];
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
 
     var _locale = parseArgs.apply(void 0, args).locale || locale;
     return this._exist(messages[_locale], key)
@@ -1705,21 +1402,6 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
     return this._te(key, this.locale, this._getMessages(), locale)
   };
 
-<<<<<<< HEAD
-  var ret =
-    this._localizeDateTime(value, locale, this.fallbackLocale, this._getDateTimeFormats(), key);
-  if (this._isFallbackRoot(ret)) {
-    if ("development" !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-      warn(("Fall back to datetime localization of root: key '" + key + "' ."));
-    }
-    /* istanbul ignore if */
-    if (!this._root) { throw Error('unexpected error') }
-    return this._root.d(value, key, locale)
-  } else {
-    return ret || ''
-  }
-};
-=======
   VueI18n.prototype.getLocaleMessage = function getLocaleMessage (locale) {
     return looseClone(this._vm.messages[locale] || {})
   };
@@ -1735,7 +1417,6 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
   VueI18n.prototype.getDateTimeFormat = function getDateTimeFormat (locale) {
     return looseClone(this._vm.dateTimeFormats[locale] || {})
   };
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
 
   VueI18n.prototype.setDateTimeFormat = function setDateTimeFormat (locale, format) {
     this._vm.$set(this._vm.dateTimeFormats, locale, format);
@@ -1757,7 +1438,7 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
 
     // fallback locale
     if (isNull(formats) || isNull(formats[key])) {
-      {
+      if (!this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(("Fall back to '" + fallback + "' datetime formats from '" + locale + " datetime formats."));
       }
       _locale = fallback;
@@ -1788,61 +1469,10 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
       return new Intl.DateTimeFormat(locale).format(value)
     }
 
-<<<<<<< HEAD
-  return this._d(value, locale, key)
-};
-
-VueI18n.prototype.getNumberFormat = function getNumberFormat (locale) {
-  return looseClone(this._vm.numberFormats[locale] || {})
-};
-
-VueI18n.prototype.setNumberFormat = function setNumberFormat (locale, format) {
-  this._vm.$set(this._vm.numberFormats, locale, format);
-};
-
-VueI18n.prototype.mergeNumberFormat = function mergeNumberFormat (locale, format) {
-  this._vm.$set(this._vm.numberFormats, locale, Vue.util.extend(this._vm.numberFormats[locale] || {}, format));
-};
-
-VueI18n.prototype._localizeNumber = function _localizeNumber (
-  value,
-  locale,
-  fallback,
-  numberFormats,
-  key,
-  options
-) {
-  var _locale = locale;
-  var formats = numberFormats[_locale];
-
-  // fallback locale
-  if (isNull(formats) || isNull(formats[key])) {
-    if ("development" !== 'production' && !this._silentTranslationWarn) {
-      warn(("Fall back to '" + fallback + "' number formats from '" + locale + " number formats."));
-    }
-    _locale = fallback;
-    formats = numberFormats[_locale];
-  }
-
-    if (isNull(formats) || isNull(formats[key])) {
-    return null
-  } else {
-    var format = formats[key];
-
-    var formatter;
-      if (options) {
-      // If options specified - create one time number formatter
-      formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
-    } else {
-      var id = _locale + "__" + key;
-      formatter = this._numberFormatters[id];
-      if (!formatter) {
-        formatter = this._numberFormatters[id] = new Intl.NumberFormat(_locale, format);
-=======
     var ret =
       this._localizeDateTime(value, locale, this.fallbackLocale, this._getDateTimeFormats(), key);
     if (this._isFallbackRoot(ret)) {
-      {
+      if (!this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(("Fall back to datetime localization of root: key '" + key + "' ."));
       }
       /* istanbul ignore if */
@@ -1877,7 +1507,6 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
       }
       if (typeof args[1] === 'string') {
         locale = args[1];
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
       }
     }
 
@@ -1892,13 +1521,6 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
     this._vm.$set(this._vm.numberFormats, locale, format);
   };
 
-<<<<<<< HEAD
-  var ret =
-    this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key, options);
-  if (this._isFallbackRoot(ret)) {
-    if ("development" !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-      warn(("Fall back to number localization of root: key '" + key + "' ."));
-=======
   VueI18n.prototype.mergeNumberFormat = function mergeNumberFormat (locale, format) {
     this._vm.$set(this._vm.numberFormats, locale, merge(this._vm.numberFormats[locale] || {}, format));
   };
@@ -1916,12 +1538,11 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
 
     // fallback locale
     if (isNull(formats) || isNull(formats[key])) {
-      {
+      if (!this._silentTranslationWarn) {
         warn(("Fall back to '" + fallback + "' number formats from '" + locale + " number formats."));
       }
       _locale = fallback;
       formats = numberFormats[_locale];
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
     }
 
     if (isNull(formats) || isNull(formats[key])) {
@@ -1961,7 +1582,7 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
     var ret =
       this._localizeNumber(value, locale, this.fallbackLocale, this._getNumberFormats(), key, options);
     if (this._isFallbackRoot(ret)) {
-      {
+      if (!this._silentTranslationWarn && !this._silentRootFallbackWarn) {
         warn(("Fall back to number localization of root: key '" + key + "' ."));
       }
       /* istanbul ignore if */
@@ -2015,12 +1636,23 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
 
   Object.defineProperties( VueI18n.prototype, prototypeAccessors );
 
-  VueI18n.availabilities = {
-    dateTimeFormat: canUseDateTimeFormat,
-    numberFormat: canUseNumberFormat
-  };
+  var availabilities;
+  // $FlowFixMe
+  Object.defineProperty(VueI18n, 'availabilities', {
+    get: function get () {
+      if (!availabilities) {
+        var intlDefined = typeof Intl !== 'undefined';
+        availabilities = {
+          dateTimeFormat: intlDefined && typeof Intl.DateTimeFormat !== 'undefined',
+          numberFormat: intlDefined && typeof Intl.NumberFormat !== 'undefined'
+        };
+      }
+
+      return availabilities
+    }
+  });
   VueI18n.install = install;
-  VueI18n.version = '8.3.2';
+  VueI18n.version = '8.7.0';
 
   return VueI18n;
 

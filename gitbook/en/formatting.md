@@ -146,23 +146,28 @@ class CustomFormatter {
  // @param {Object | Array} values
  //   values of `message` interpolation.
  //   passed values with `$t`, `$tc` and `i18n` functional component.
- //   e.g. 
- //   - $t('hello', { name: 'kazupon' }) -> passed values: Object `{ name: 'kazupon' }` 
+ //   e.g.
+ //   - $t('hello', { name: 'kazupon' }) -> passed values: Object `{ name: 'kazupon' }`
  //   - $t('hello', ['kazupon']) -> passed values: Array `['kazupon']`
  //   - `i18n` functional component (component interpolation)
- //     <i18 path="hello">
+ //     <i18n path="hello">
  //       <p>kazupon</p>
  //       <p>how are you?</p>
  //     </i18n>
  //     -> passed values: Array (included VNode):
  //        `[VNode{ tag: 'p', text: 'kazupon', ...}, VNode{ tag: 'p', text: 'how are you?', ...}]`
  //
+ // @param {string} path
+ //   a path to the message, as passed into the $t/t() functions.
+ //   - $t('hello.louis') -> path === 'hello.louis'
+ //
  // @return {Array<any>}
  //   interpolated values. you need to return the following:
  //   - array of string, when is using `$t` or `$tc`.
  //   - array included VNode object, when is using `i18n` functional component.
- // 
- interpolate (message, values) {
+ //   - null - if you want the default vue-i18n formatter to handle the case
+ //
+ interpolate (message, values, path) {
    // implement interpolation logic here
    // ...
 

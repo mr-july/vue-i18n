@@ -27,12 +27,12 @@ describe('custom directive', () => {
           }
         })
         nextTick(() => {
-          assert.equal(vm.$refs.text.textContent, messages.en.message.hello)
-          assert.equal(vm.$refs.text._vt, messages.en.message.hello)
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+          assert.strictEqual(vm.$refs.text._vt, messages.en.message.hello)
           vm.$forceUpdate()
         }).then(() => {
-          assert.equal(vm.$refs.text.textContent, messages.en.message.hello)
-          assert.equal(vm.$refs.text._vt, messages.en.message.hello)
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+          assert.strictEqual(vm.$refs.text._vt, messages.en.message.hello)
         }).then(done)
       })
     })
@@ -55,12 +55,12 @@ describe('custom directive', () => {
         })
         const expected = 'こんにちは kazupon, ごきげんいかが？'
         nextTick(() => {
-          assert.equal(vm.$refs.text.textContent, expected)
-          assert.equal(vm.$refs.text._vt, expected)
+          assert.strictEqual(vm.$refs.text.textContent, expected)
+          assert.strictEqual(vm.$refs.text._vt, expected)
           vm.$forceUpdate()
         }).then(() => {
-          assert.equal(vm.$refs.text.textContent, expected)
-          assert.equal(vm.$refs.text._vt, expected)
+          assert.strictEqual(vm.$refs.text.textContent, expected)
+          assert.strictEqual(vm.$refs.text._vt, expected)
         }).then(done)
       })
     })
@@ -84,16 +84,16 @@ describe('custom directive', () => {
         })
         nextTick(() => {
           expected = 'Hello kazupon, how are you?'
-          assert.equal(vm.$refs.text.textContent, expected)
-          assert.equal(vm.$refs.text._vt, expected)
-          assert.equal(vm.$refs.text._locale, 'en')
+          assert.strictEqual(vm.$refs.text.textContent, expected)
+          assert.strictEqual(vm.$refs.text._vt, expected)
+          assert.strictEqual(vm.$refs.text._locale, 'en')
           vm.$i18n.locale = 'ja' // change locale
           vm.$forceUpdate()
         }).then(() => {
           expected = 'こんにちは kazupon, ごきげんいかが？'
-          assert.equal(vm.$refs.text.textContent, expected)
-          assert.equal(vm.$refs.text._vt, expected)
-          assert.equal(vm.$refs.text._locale, 'ja')
+          assert.strictEqual(vm.$refs.text.textContent, expected)
+          assert.strictEqual(vm.$refs.text._vt, expected)
+          assert.strictEqual(vm.$refs.text._locale, 'ja')
         }).then(done)
       })
     })
@@ -170,12 +170,12 @@ describe('custom directive', () => {
           }
         })
         nextTick(() => {
-          assert.equal(vm.$refs.text.textContent, 'car')
-          assert.equal(vm.$refs.text._vt, 'car')
+          assert.strictEqual(vm.$refs.text.textContent, 'car')
+          assert.strictEqual(vm.$refs.text._vt, 'car')
           vm.$forceUpdate()
         }).then(() => {
-          assert.equal(vm.$refs.text.textContent, 'car')
-          assert.equal(vm.$refs.text._vt, 'car')
+          assert.strictEqual(vm.$refs.text.textContent, 'car')
+          assert.strictEqual(vm.$refs.text._vt, 'car')
         }).then(done)
       })
 
@@ -190,12 +190,87 @@ describe('custom directive', () => {
           }
         })
         nextTick(() => {
-          assert.equal(vm.$refs.text.textContent, 'cars')
-          assert.equal(vm.$refs.text._vt, 'cars')
+          assert.strictEqual(vm.$refs.text.textContent, 'cars')
+          assert.strictEqual(vm.$refs.text._vt, 'cars')
           vm.$forceUpdate()
         }).then(() => {
-          assert.equal(vm.$refs.text.textContent, 'cars')
-          assert.equal(vm.$refs.text._vt, 'cars')
+          assert.strictEqual(vm.$refs.text.textContent, 'cars')
+          assert.strictEqual(vm.$refs.text._vt, 'cars')
+        }).then(done)
+      })
+    })
+
+    describe('preserve content', () => {
+      it('should clear element content on destroy by default', done => {
+        const vm = createVM({
+          i18n,
+          data: () => ({ visible: true }),
+          render (h) {
+            // <p ref="text" v-t="'message.hello'"></p>
+            const directives = this.visible ? [{
+              name: 't', rawName: 'v-t', value: ('message.hello'), expression: "'message.hello'"
+            }] : []
+            return h('p', { ref: 'text', directives })
+          }
+        })
+
+        nextTick(() => {
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+
+          vm.visible = false
+          vm.$forceUpdate()
+        }).then(() => {
+          assert.strictEqual(vm.$refs.text.textContent, '')
+        }).then(done)
+      })
+
+      it('should not clear element content with "preserve" modifier', done => {
+        const vm = createVM({
+          i18n,
+          data: () => ({ visible: true }),
+          render (h) {
+            // <p ref="text" v-t.preserve="'message.hello'"></p>
+            const directives = this.visible ? [{
+              name: 't', rawName: 'v-t', value: ('message.hello'), expression: "'message.hello'", modifiers: { preserve: true }
+            }] : []
+            return h('p', { ref: 'text', directives })
+          }
+        })
+
+        nextTick(() => {
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+
+          vm.visible = false
+          vm.$forceUpdate()
+        }).then(() => {
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+        }).then(done)
+      })
+
+      it('should not clear element content when "preserveDirectiveContent" i18nOption is set to true', done => {
+        const vm = createVM({
+          i18n: new VueI18n({
+            locale: 'en',
+            messages,
+            preserveDirectiveContent: true
+          }),
+          data: () => ({ visible: true }),
+          render (h) {
+            // <p ref="text" v-t="'message.hello'"></p>
+            const directives = this.visible ? [{
+              name: 't', rawName: 'v-t', value: ('message.hello'), expression: "'message.hello'"
+            }] : []
+            return h('p', { ref: 'text', directives })
+          }
+        })
+
+        nextTick(() => {
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
+
+          vm.visible = false
+          vm.$forceUpdate()
+        }).then(() => {
+          assert.strictEqual(vm.$refs.text.textContent, messages.en.message.hello)
         }).then(done)
       })
     })

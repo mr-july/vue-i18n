@@ -1,6 +1,6 @@
 /*!
- * vue-i18n v8.3.2 
- * (c) 2018 kazuya kawaguchi
+ * vue-i18n v8.7.0 
+ * (c) 2019 kazuya kawaguchi
  * Released under the MIT License.
  */
 /*  */
@@ -131,12 +131,6 @@ function looseEqual (a, b) {
   }
 }
 
-var canUseDateTimeFormat =
-  typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat !== 'undefined';
-
-var canUseNumberFormat =
-  typeof Intl !== 'undefined' && typeof Intl.NumberFormat !== 'undefined';
-
 /*  */
 
 function extend (Vue) {
@@ -222,6 +216,8 @@ var mixin = {
           options.i18n.fallbackLocale = this.$root.$i18n.fallbackLocale;
           options.i18n.silentTranslationWarn = this.$root.$i18n.silentTranslationWarn;
           options.i18n.silentRootFallbackWarn = this.$root.$i18n.silentRootFallbackWarn;
+          options.i18n.pluralizationRules = this.$root.$i18n.pluralizationRules;
+          options.i18n.preserveDirectiveContent = this.$root.$i18n.preserveDirectiveContent;
         }
 
         // init locale messages via custom blocks
@@ -395,7 +391,10 @@ function unbind (el, binding, vnode, oldVNode) {
     return
   }
 
-  el.textContent = '';
+  var i18n = vnode.context.$i18n || {};
+  if (!binding.modifiers.preserve && !i18n.preserveDirectiveContent) {
+    el.textContent = '';
+  }
   el._vt = undefined;
   delete el['_vt'];
   el._locale = undefined;
@@ -936,8 +935,15 @@ var numberFormatKeys = [
   'localeMatcher',
   'formatMatcher'
 ];
-var linkKeyMatcher = /(?:@:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g;
+var linkKeyMatcher = /(?:@(?:\.[a-z]+)?:(?:[\w\-_|.]+|\([\w\-_|.]+\)))/g;
+var linkKeyPrefixMatcher = /^@(?:\.([a-z]+))?:/;
 var bracketsMatcher = /[()]/g;
+var formatters = {
+  'upper': function (str) { return str.toLocaleUpperCase(); },
+  'lower': function (str) { return str.toLocaleLowerCase(); }
+};
+
+var defaultFormatter = new BaseFormatter();
 
 var VueI18n = function VueI18n (options) {
   var this$1 = this;
@@ -958,7 +964,7 @@ var VueI18n = function VueI18n (options) {
   var numberFormats = options.numberFormats || {};
 
   this._vm = null;
-  this._formatter = options.formatter || new BaseFormatter();
+  this._formatter = options.formatter || defaultFormatter;
   this._missing = options.missing || null;
   this._root = options.root || null;
   this._sync = options.sync === undefined ? true : !!options.sync;
@@ -976,6 +982,11 @@ var VueI18n = function VueI18n (options) {
   this._path = new I18nPath();
   this._dataListeners = [];
 
+  this.pluralizationRules = options.pluralizationRules || {};
+  this.preserveDirectiveContent = options.preserveDirectiveContent === undefined
+    ? false
+    : !!options.preserveDirectiveContent;
+
   this._exist = function (message, key) {
     if (!message || !key) { return false }
     return !isNull(this$1._path.getPathValue(message, key))
@@ -990,11 +1001,7 @@ var VueI18n = function VueI18n (options) {
   });
 };
 
-<<<<<<< HEAD
-var prototypeAccessors = { vm: {},messages: {},dateTimeFormats: {},numberFormats: {},locale: {},fallbackLocale: {},missing: {},formatter: {},silentTranslationWarn: {},silentRootFallbackWarn: {} };
-=======
-var prototypeAccessors = { vm: { configurable: true },messages: { configurable: true },dateTimeFormats: { configurable: true },numberFormats: { configurable: true },locale: { configurable: true },fallbackLocale: { configurable: true },missing: { configurable: true },formatter: { configurable: true },silentTranslationWarn: { configurable: true } };
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
+var prototypeAccessors = { vm: { configurable: true },messages: { configurable: true },dateTimeFormats: { configurable: true },numberFormats: { configurable: true },locale: { configurable: true },fallbackLocale: { configurable: true },missing: { configurable: true },formatter: { configurable: true },silentTranslationWarn: { configurable: true },silentRootFallbackWarn: { configurable: true } };
 
 VueI18n.prototype._initVM = function _initVM (data) {
   var silent = Vue.config.silent;
@@ -1129,11 +1136,11 @@ VueI18n.prototype._interpolate = function _interpolate (
   }
 
   // Check for the existence of links within the translated string
-  if (ret.indexOf('@:') >= 0) {
+  if (ret.indexOf('@:') >= 0 || ret.indexOf('@.') >= 0) {
     ret = this._link(locale, message, ret, host, interpolateMode, values, visitedLinkStack);
   }
 
-  return this._render(ret, interpolateMode, values)
+  return this._render(ret, interpolateMode, values, key)
 };
 
 VueI18n.prototype._link = function _link (
@@ -1160,8 +1167,12 @@ VueI18n.prototype._link = function _link (
       continue
     }
     var link = matches[idx];
-    // Remove the leading @: and the brackets
-    var linkPlaceholder = link.substr(2).replace(bracketsMatcher, '');
+    var linkKeyPrefixMatches = link.match(linkKeyPrefixMatcher);
+    var linkPrefix = linkKeyPrefixMatches[0];
+      var formatterName = linkKeyPrefixMatches[1];
+
+    // Remove the leading @:, @.case: and the brackets
+    var linkPlaceholder = link.replace(linkPrefix, '').replace(bracketsMatcher, '');
 
     if (visitedLinkStack.includes(linkPlaceholder)) {
       if (process.env.NODE_ENV !== 'production') {
@@ -1195,6 +1206,9 @@ VueI18n.prototype._link = function _link (
       locale, linkPlaceholder, translated, host,
       Array.isArray(values) ? values : [values]
     );
+    if (formatters.hasOwnProperty(formatterName)) {
+      translated = formatters[formatterName](translated);
+    }
 
     visitedLinkStack.pop();
 
@@ -1205,8 +1219,14 @@ VueI18n.prototype._link = function _link (
   return ret
 };
 
-VueI18n.prototype._render = function _render (message, interpolateMode, values) {
-  var ret = this._formatter.interpolate(message, values);
+VueI18n.prototype._render = function _render (message, interpolateMode, values, path) {
+  var ret = this._formatter.interpolate(message, values, path);
+
+  // If the custom formatter refuses to work - apply the default one
+  if (!ret) {
+    ret = defaultFormatter.interpolate(message, values, path);
+  }
+
   // if interpolateMode is **not** 'string' ('row'),
   // return the compiled data (e.g. ['foo', VNode, 'bar']) with formatter
   return interpolateMode === 'string' ? ret.join('') : ret
@@ -1274,13 +1294,9 @@ VueI18n.prototype._i = function _i (key, locale, messages, host, values) {
   var ret =
     this._translate(messages, locale, this.fallbackLocale, key, host, 'raw', values);
   if (this._isFallbackRoot(ret)) {
-<<<<<<< HEAD
     if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn && !this._silentRootFallbackWarn) {
-=======
-    if (process.env.NODE_ENV !== 'production' && !this._silentTranslationWarn) {
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
       warn(("Fall back to interpolate the keypath '" + key + "' with root locale."));
-      }
+    }
     if (!this._root) { throw Error('unexpected error') }
     return this._root.$i18n.i(key, locale, values)
   } else {
@@ -1338,17 +1354,26 @@ VueI18n.prototype.fetchChoice = function fetchChoice (message, choice) {
  * @returns a final choice index
 */
 VueI18n.prototype.getChoiceIndex = function getChoiceIndex (choice, choicesLength) {
-  choice = Math.abs(choice);
+  // Default (old) getChoiceIndex implementation - english-compatible
+  var defaultImpl = function (_choice, _choicesLength) {
+    _choice = Math.abs(_choice);
 
-  if (choicesLength === 2) {
-    return choice
-      ? choice > 1
-        ? 1
-        : 0
-      : 1
+    if (_choicesLength === 2) {
+      return _choice
+        ? _choice > 1
+          ? 1
+          : 0
+        : 1
+    }
+
+    return _choice ? Math.min(_choice, 2) : 0
+  };
+
+  if (this.locale in this.pluralizationRules) {
+    return this.pluralizationRules[this.locale].apply(this, [choice, choicesLength])
+  } else {
+    return defaultImpl(choice, choicesLength)
   }
-
-  return choice ? Math.min(choice, 2) : 0
 };
 
 VueI18n.prototype.tc = function tc (key, choice) {
@@ -1392,13 +1417,8 @@ VueI18n.prototype.setDateTimeFormat = function setDateTimeFormat (locale, format
 };
 
 VueI18n.prototype.mergeDateTimeFormat = function mergeDateTimeFormat (locale, format) {
-<<<<<<< HEAD
-  this._vm.$set(this._vm.dateTimeFormats, locale, Vue.util.extend(this._vm.dateTimeFormats[locale] || {}, format));
-  };
-=======
   this._vm.$set(this._vm.dateTimeFormats, locale, merge(this._vm.dateTimeFormats[locale] || {}, format));
 };
->>>>>>> 4e48e63ff78295894bd8c86236c8fa9090df7f59
 
 VueI18n.prototype._localizeDateTime = function _localizeDateTime (
   value,
@@ -1423,7 +1443,7 @@ VueI18n.prototype._localizeDateTime = function _localizeDateTime (
     return null
   } else {
     var format = formats[key];
-      var id = _locale + "__" + key;
+    var id = _locale + "__" + key;
     var formatter = this._dateTimeFormatters[id];
     if (!formatter) {
       formatter = this._dateTimeFormatters[id] = new Intl.DateTimeFormat(_locale, format);
@@ -1519,13 +1539,13 @@ VueI18n.prototype._localizeNumber = function _localizeNumber (
     formats = numberFormats[_locale];
   }
 
-    if (isNull(formats) || isNull(formats[key])) {
+  if (isNull(formats) || isNull(formats[key])) {
     return null
   } else {
     var format = formats[key];
 
     var formatter;
-      if (options) {
+    if (options) {
       // If options specified - create one time number formatter
       formatter = new Intl.NumberFormat(_locale, Object.assign({}, format, options));
     } else {
@@ -1610,11 +1630,22 @@ VueI18n.prototype.n = function n (value) {
 
 Object.defineProperties( VueI18n.prototype, prototypeAccessors );
 
-VueI18n.availabilities = {
-  dateTimeFormat: canUseDateTimeFormat,
-  numberFormat: canUseNumberFormat
-};
+var availabilities;
+// $FlowFixMe
+Object.defineProperty(VueI18n, 'availabilities', {
+  get: function get () {
+    if (!availabilities) {
+      var intlDefined = typeof Intl !== 'undefined';
+      availabilities = {
+        dateTimeFormat: intlDefined && typeof Intl.DateTimeFormat !== 'undefined',
+        numberFormat: intlDefined && typeof Intl.NumberFormat !== 'undefined'
+      };
+    }
+
+    return availabilities
+  }
+});
 VueI18n.install = install;
-VueI18n.version = '8.3.2';
+VueI18n.version = '8.7.0';
 
 export default VueI18n;
